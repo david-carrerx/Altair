@@ -10,7 +10,7 @@ export default function Events({ navigation }) {
     };
 
     const handleAddEvent = () => {
-        console.log('Adding new event...');
+        navigation.navigate('AddEvent');
     };
 
     return (

@@ -1,18 +1,16 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Image, TouchableOpacity, View, Text } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native'; // Importa NavigationContainer
+import { Image, TouchableOpacity, View } from 'react-native';
 import ProfileIcon from '../assets/user-icon.png';
 import EventsIcon from '../assets/event-icon.png';
 import Profile from './Profile';
-import Events from './Events';
+import EventsStack from './EventsStack'; // Importa EventsStack en lugar de Events
 
 const Tab = createBottomTabNavigator();
 
 export default function HomeTabs() {
     return (
         <View style={{ flex: 1 }}>
-            
             <Tab.Navigator
                 screenOptions={({ route }) => ({
                     tabBarIcon: ({ focused }) => {
@@ -20,38 +18,37 @@ export default function HomeTabs() {
 
                         if (route.name === 'Profile') {
                             iconName = focused ? ProfileIcon : ProfileIcon;
-                        } else if (route.name === 'Events') {
+                        } else if (route.name === 'EventsStack') {
                             iconName = focused ? EventsIcon : EventsIcon;
                         }
 
                         return <Image source={iconName} style={{ width: 30, height: 30 }} />;
                     },
-                    tabBarActiveTintColor: '#000', // Color de las pestañas activas
-                    tabBarInactiveTintColor: 'gray', // Color de las pestañas inactivas
+                    tabBarActiveTintColor: '#000',
+                    tabBarInactiveTintColor: 'gray',
                     tabBarStyle: {
-                        backgroundColor: '#B02A37', // Color de fondo de la barra de pestañas
-                        height: 60, // Ajusta la altura de la barra de pestañas
+                        backgroundColor: '#B02A37',
+                        height: 60,
                     },
-                    tabBarShowLabel: false, // Oculta el texto de las pestañas
-                    headerStyle: { // Establece el estilo del encabezado
-                        backgroundColor: '#B02A37', // Cambia el color del encabezado a verde
+                    tabBarShowLabel: false,
+                    headerStyle: {
+                        backgroundColor: '#B02A37',
                     },
-                    headerTitleStyle: { // Establece el estilo del texto del encabezado
-                        color: 'white', // Cambia el color del texto a blanco
-                        fontFamily: 'Joti One', // Establece la fuente del texto a Joti One
+                    headerTitleStyle: {
+                        color: 'white',
+                        fontFamily: 'Joti One',
                         fontWeight: 'bold'
                     },
-                    headerTitleAllowFontScaling: false, // Evita que el tamaño del texto se ajuste automáticamente
-                    headerTitle: 'ALTAIR', // Establece el texto del encabezado
+                    headerTitleAllowFontScaling: false,
+                    headerTitle: 'ALTAIR',
                 })}
                 tabBar={(props) => (
                     <View style={{ flexDirection: 'row', height: 50 }}>
                         {props.state.routes.map((route, index) => {
                             const isFocused = props.state.index === index;
-                            let color = isFocused ? (route.name === 'Profile' ? '#842029' : '#B02A37') : '#B02A37'; // Color de fondo predeterminado
+                            let color = isFocused ? (route.name === 'Profile' ? '#842029' : '#B02A37') : '#B02A37';
 
-                            if (route.name === 'Events' && isFocused) {
-                                // Cambia el color de fondo de la primera mitad de la barra de pestañas si la ruta actual es 'Events'
+                            if (route.name === 'EventsStack' && isFocused) {
                                 color = '#842029';
                             }
 
@@ -73,7 +70,7 @@ export default function HomeTabs() {
                     </View>
                 )}
             >
-                <Tab.Screen name="Events" component={Events} />
+                <Tab.Screen name="EventsStack" component={EventsStack} />
                 <Tab.Screen name="Profile" component={Profile} />
             </Tab.Navigator>
         </View>
