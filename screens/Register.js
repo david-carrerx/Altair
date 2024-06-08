@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { StyleSheet, View, Image, Dimensions, TextInput, TouchableOpacity, Text, Alert } from "react-native";
 import app from "../config/firebase";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, collection, addDoc } from "firebase/firestore";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -35,13 +35,16 @@ export default function Register(props) {
         }
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user; // Obteniendo el usuario de la credencial
             const userData = {
                 fullName: fullName,
                 email: email,
                 role: 'user'
             };
 
-            const docRef = await addDoc(collection(db, "users"), userData);
+            // Utilizando el mismo ID de autenticación como ID del documento en Firestore
+            const docRef = await setDoc(doc(db, "users", user.uid), userData);
+
             Alert.alert("Usuario creado exitosamente");
             props.navigation.navigate('Login');
         } catch (error) {
