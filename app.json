@@ -25,6 +25,13 @@
       "favicon": "./assets/favicon.png"
     },
     "scheme": "altair",
-    "platforms": ["ios", "android", "web"]
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "plugins": [
+      "expo-facebook"
+    ]
   }
 }

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, View, Image, Dimensions, TextInput, TouchableOpacity, Text, Alert } from "react-native";
+import { StyleSheet, View, Image, Dimensions, TextInput, TouchableOpacity, Text, Alert, TouchableWithoutFeedback, Keyboard } from "react-native";
 import app from "../config/firebase";
-import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithCredential } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithCredential, FacebookAuthProvider } from "firebase/auth";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 import * as Google from 'expo-auth-session/providers/google';
+import * as Facebook from 'expo-auth-session/providers/facebook';
 import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -14,79 +15,80 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const { width, height } = Dimensions.get('window');
 
-export default function Login(props) {
+export default function Login() {
+    const navigation = useNavigation();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [userInfo, setUserInfo] = useState(null);
 
-    const [request, response, promptAsync] = Google.useAuthRequest({
+    const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
         iosClientId: '646002099467-7m9bcr08uk8ik7t04f1q2j6lkjq6tl52.apps.googleusercontent.com',
         expoClientId: '646002099467-7m9bcr08uk8ik7t04f1q2j6lkjq6tl52.apps.googleusercontent.com',
     });
 
-    useEffect(() => {
-        handleEffect();
-    }, [response]);
+    const [facebookRequest, facebookResponse, facebookPromptAsync] = Facebook.useAuthRequest({
+        clientId: '1113160256457215',
+    });
 
-    async function handleEffect() {
-        const user = await getLocalUser();
-        
-        if (response?.type === 'success') {
-            const { authentication } = response;
+    useEffect(() => {
+        handleGoogleResponse();
+    }, [googleResponse]);
+
+    async function handleGoogleResponse() {
+        if (googleResponse?.type === 'success') {
+            const { authentication } = googleResponse;
             if (authentication) {
-                getUserInfo(authentication.accessToken);
-                signInWithGoogle(authentication.accessToken);
+                await signInWithGoogle(authentication.accessToken);
             }
         }
     }
 
-    const getLocalUser = async () => {
-        const data = await AsyncStorage.getItem("@user");
-        if (!data) return null;
-        return JSON.parse(data);
-    };
+    useEffect(() => {
+        handleFacebookResponse();
+    }, [facebookResponse]);
 
-    const getUserInfo = async (token) => {
-        if (!token) return;
-        try {
-            const response = await fetch(
-                "https://www.googleapis.com/userinfo/v2/me",
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                }
-            );
-
-            const user = await response.json();
-            await AsyncStorage.setItem("@user", JSON.stringify(user));
-            setUserInfo(user);
-            Alert.alert("Iniciando sesión...", "Accediendo");
-            props.navigation.navigate('Home');
-        } catch (error) {
-            Alert.alert("Error", "Error al obtener información del usuario");
-            console.log(error);
+    async function handleFacebookResponse() {
+        if (facebookResponse?.type === 'success' && facebookResponse.authentication) {
+            const { accessToken } = facebookResponse.authentication;
+            const userInfoResponse = await fetch(`https://graph.facebook.com/me?access_token=${accessToken}&fields=id,name,picture.type(large)`);
+            const userInfo = await userInfoResponse.json();
+            setUserInfo(userInfo);
+            const credential = FacebookAuthProvider.credential(accessToken);
+            signInWithCredential(auth, credential)
+                .then(async (userCredential) => {
+                    const user = userCredential.user;
+                    const userData = {
+                        fullName: user.displayName,
+                        email: user.email,
+                        role: 'user',
+                    };
+                    await setDoc(doc(db, "users", user.uid), userData);
+                    Alert.alert("Iniciando sesión...", "Accediendo");
+                    navigation.navigate('Home');
+                })
+                .catch(error => {
+                    Alert.alert("Error", "Error al autenticar con Facebook");
+                    console.log("Error al autenticar con Facebook:", error);
+                });
         }
-    };
+    }
 
-    const signInWithGoogle = async (token) => {
+    const signInWithGoogle = async (accessToken) => {
+        const credential = GoogleAuthProvider.credential(null, accessToken);
         try {
-            const credential = GoogleAuthProvider.credential(null, token);
             const userCredential = await signInWithCredential(auth, credential);
             const user = userCredential.user;
-
-            // Guardar datos del usuario en Firestore
             const userData = {
                 fullName: user.displayName,
                 email: user.email,
-                role: 'user'
+                role: 'user',
             };
-
             await setDoc(doc(db, "users", user.uid), userData);
-
             Alert.alert("Iniciando sesión...", "Accediendo");
-            props.navigation.navigate('Home');
+            navigation.navigate('Home');
         } catch (error) {
             Alert.alert("Error", "Error al autenticar con Google");
-            console.log(error);
+            console.log("Error al autenticar con Google:", error);
         }
     };
 
@@ -94,7 +96,7 @@ export default function Login(props) {
         try {
             await signInWithEmailAndPassword(auth, email, password);
             Alert.alert("Iniciando sesión...", "Accediendo");
-            props.navigation.navigate('Home');
+            navigation.navigate('Home');
         } catch (error) {
             Alert.alert("Error", "Usuario o contraseña incorrectos");
             console.log(error);
@@ -102,7 +104,7 @@ export default function Login(props) {
     }
 
     const navigateToRegister = () => {
-        props.navigation.navigate('Register');
+        navigation.navigate('Register');
     }
 
     const forgotPassword = () => {
@@ -121,43 +123,45 @@ export default function Login(props) {
     }
 
     return (
-        <View style={styles.container}>
-            <View style={styles.imageContainer}>
-                <Image source={require('../assets/login-wallpaper.jpeg')} style={styles.image} />
-                <View style={styles.overlay}></View>
-                <View style={styles.logoContainer}>
-                    <Image source={require('../assets/altair-logo.png')} style={styles.logo} />
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.container}>
+                <View style={styles.imageContainer}>
+                    <Image source={require('../assets/login-wallpaper.jpeg')} style={styles.image} />
+                    <View style={styles.overlay}></View>
+                    <View style={styles.logoContainer}>
+                        <Image source={require('../assets/altair-logo.png')} style={styles.logo} />
+                    </View>
                 </View>
-            </View>
-            <View style={styles.contentContainer}>
-                <TextInput placeholder="Correo electrónico" style={styles.input} onChangeText={(text) => setEmail(text)} />
-                <TextInput placeholder="Contraseña" style={styles.input} onChangeText={(text) => setPassword(text)} secureTextEntry />
-                <View style={styles.buttonContainer}>
-                    <TouchableOpacity style={styles.button} onPress={functionLogin}>
-                        <Text style={styles.buttonText}>Iniciar sesión</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.registerButton]} onPress={navigateToRegister}>
-                        <Text style={[styles.buttonText, styles.registerButtonText]}>Registrarse</Text>
-                    </TouchableOpacity>
-                </View>
-                <TouchableOpacity onPress={forgotPassword}>
-                    <Text style={[styles.forgotPasswordText, { textDecorationLine: 'underline' }]}>
-                        ¿Olvidaste tu contraseña? Click aquí
-                    </Text>
-                </TouchableOpacity>
-                <View style={styles.socialContainer}>
-                    <Text style={styles.socialText}>Iniciar sesión con:</Text>
-                    <View style={styles.socialButtons}>
-                        <TouchableOpacity style={[styles.socialButton, styles.socialButtonMarginRight]}>
-                            <Image source={require('../assets/facebook-icon.png')} style={styles.socialIcon} />
+                <View style={styles.contentContainer}>
+                    <TextInput placeholder="Correo electrónico" style={styles.input} onChangeText={(text) => setEmail(text)} />
+                    <TextInput placeholder="Contraseña" style={styles.input} onChangeText={(text) => setPassword(text)} secureTextEntry />
+                    <View style={styles.buttonContainer}>
+                        <TouchableOpacity style={styles.button} onPress={functionLogin}>
+                            <Text style={styles.buttonText}>Iniciar sesión</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.socialButton, styles.socialButtonMarginLeft]} onPress={() => promptAsync()}>
-                            <Image source={require('../assets/google-icon.png')} style={styles.socialIcon} />
+                        <TouchableOpacity style={[styles.button, styles.registerButton]} onPress={navigateToRegister}>
+                            <Text style={[styles.buttonText, styles.registerButtonText]}>Registrarse</Text>
                         </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity onPress={forgotPassword}>
+                        <Text style={[styles.forgotPasswordText, { textDecorationLine: 'underline' }]}>
+                            ¿Olvidaste tu contraseña? Click aquí
+                        </Text>
+                    </TouchableOpacity>
+                    <View style={styles.socialContainer}>
+                        <Text style={styles.socialText}>Iniciar sesión con:</Text>
+                        <View style={styles.socialButtons}>
+                            <TouchableOpacity style={[styles.socialButton, styles.socialButtonMarginRight]} onPress={() => facebookPromptAsync()}>
+                                <Image source={require('../assets/facebook-icon.png')} style={styles.socialIcon} />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.socialButton, styles.socialButtonMarginLeft]} onPress={() => googlePromptAsync()}>
+                                <Image source={require('../assets/google-icon.png')} style={styles.socialIcon} />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
             </View>
-        </View>
+        </TouchableWithoutFeedback>
     );
 }
 
