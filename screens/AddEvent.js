@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, TextInput, StyleSheet, Text, Image, ScrollView, TouchableOpacity, Modal, FlatList } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+// import * as ImagePicker from 'expo-image-picker';
 
 export default function AddEvent(props) {
   const [artistName, setArtistName] = useState('');
@@ -19,7 +19,7 @@ export default function AddEvent(props) {
   const [categories, setCategories] = useState(['Rock', 'Pop', 'Jazz', 'Clásica', 'Reggaetón']);
   const [newCategory, setNewCategory] = useState('');
   const [fieldsFilled, setFieldsFilled] = useState(false);
-  const [images, setImages] = useState([]);
+  // const [images, setImages] = useState([]);
 
   useEffect(() => {
     checkFields();
@@ -85,25 +85,25 @@ export default function AddEvent(props) {
     }
   };
 
-  const handleImageAdd = async () => {
-    let permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (permissionResult.granted === false) {
-      alert('Permission to access camera roll is required!');
-      return;
-    }
+  // const handleImageAdd = async () => {
+  //   let permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  //   if (permissionResult.granted === false) {
+  //     alert('Permission to access camera roll is required!');
+  //     return;
+  //   }
 
-    let pickerResult = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
+  //   let pickerResult = await ImagePicker.launchImageLibraryAsync({
+  //     mediaTypes: ImagePicker.MediaTypeOptions.All,
+  //     allowsEditing: true,
+  //     aspect: [4, 3],
+  //     quality: 1,
+  //   });
 
-    if (!pickerResult.cancelled) {
-      const source = { uri: pickerResult.uri };
-      setImages(prevImages => [...prevImages, source]);
-    }
-  };
+  //   if (!pickerResult.cancelled) {
+  //     const source = { uri: pickerResult.uri };
+  //     setImages(prevImages => [...prevImages, source]);
+  //   }
+  // };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -157,6 +157,7 @@ export default function AddEvent(props) {
         multiline={true}
         numberOfLines={4}
       />
+      {/* 
       <TouchableOpacity style={styles.imageContainer} onPress={handleImageAdd}>
         <Image source={require('../assets/add.png')} style={styles.addImage} />
         <Text style={styles.imageText}>Agrega al menos 3 imágenes del artista aquí</Text>
@@ -165,7 +166,8 @@ export default function AddEvent(props) {
         {images.map((image, index) => (
           <Image key={index} source={image} style={styles.imageItem} />
         ))}
-      </View>
+      </View> 
+      */}
       <View style={styles.mapContainer}>
         {/* Aquí irá el mapa interactivo */}
       </View>
@@ -461,5 +463,4 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 });
-
 

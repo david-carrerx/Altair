@@ -1,15 +1,94 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, View, Image, Dimensions, TextInput, TouchableOpacity, Text, Alert } from "react-native";
 import app from "../config/firebase";
-import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithCredential } from "firebase/auth";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+WebBrowser.maybeCompleteAuthSession();
 
 const auth = getAuth(app);
+const db = getFirestore(app);
 const { width, height } = Dimensions.get('window');
 
 export default function Login(props) {
-
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [userInfo, setUserInfo] = useState(null);
+
+    const [request, response, promptAsync] = Google.useAuthRequest({
+        iosClientId: '646002099467-7m9bcr08uk8ik7t04f1q2j6lkjq6tl52.apps.googleusercontent.com',
+        expoClientId: '646002099467-7m9bcr08uk8ik7t04f1q2j6lkjq6tl52.apps.googleusercontent.com',
+    });
+
+    useEffect(() => {
+        handleEffect();
+    }, [response]);
+
+    async function handleEffect() {
+        const user = await getLocalUser();
+        
+        if (response?.type === 'success') {
+            const { authentication } = response;
+            if (authentication) {
+                getUserInfo(authentication.accessToken);
+                signInWithGoogle(authentication.accessToken);
+            }
+        }
+    }
+
+    const getLocalUser = async () => {
+        const data = await AsyncStorage.getItem("@user");
+        if (!data) return null;
+        return JSON.parse(data);
+    };
+
+    const getUserInfo = async (token) => {
+        if (!token) return;
+        try {
+            const response = await fetch(
+                "https://www.googleapis.com/userinfo/v2/me",
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+
+            const user = await response.json();
+            await AsyncStorage.setItem("@user", JSON.stringify(user));
+            setUserInfo(user);
+            Alert.alert("Iniciando sesión...", "Accediendo");
+            props.navigation.navigate('Home');
+        } catch (error) {
+            Alert.alert("Error", "Error al obtener información del usuario");
+            console.log(error);
+        }
+    };
+
+    const signInWithGoogle = async (token) => {
+        try {
+            const credential = GoogleAuthProvider.credential(null, token);
+            const userCredential = await signInWithCredential(auth, credential);
+            const user = userCredential.user;
+
+            // Guardar datos del usuario en Firestore
+            const userData = {
+                fullName: user.displayName,
+                email: user.email,
+                role: 'user'
+            };
+
+            await setDoc(doc(db, "users", user.uid), userData);
+
+            Alert.alert("Iniciando sesión...", "Accediendo");
+            props.navigation.navigate('Home');
+        } catch (error) {
+            Alert.alert("Error", "Error al autenticar con Google");
+            console.log(error);
+        }
+    };
 
     const functionLogin = async () => {
         try {
@@ -62,17 +141,17 @@ export default function Login(props) {
                     </TouchableOpacity>
                 </View>
                 <TouchableOpacity onPress={forgotPassword}>
-    <Text style={[styles.forgotPasswordText, { textDecorationLine: 'underline' }]}>
-        ¿Olvidaste tu contraseña? Click aquí
-    </Text>
-</TouchableOpacity>
+                    <Text style={[styles.forgotPasswordText, { textDecorationLine: 'underline' }]}>
+                        ¿Olvidaste tu contraseña? Click aquí
+                    </Text>
+                </TouchableOpacity>
                 <View style={styles.socialContainer}>
                     <Text style={styles.socialText}>Iniciar sesión con:</Text>
                     <View style={styles.socialButtons}>
                         <TouchableOpacity style={[styles.socialButton, styles.socialButtonMarginRight]}>
                             <Image source={require('../assets/facebook-icon.png')} style={styles.socialIcon} />
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.socialButton, styles.socialButtonMarginLeft]}>
+                        <TouchableOpacity style={[styles.socialButton, styles.socialButtonMarginLeft]} onPress={() => promptAsync()}>
                             <Image source={require('../assets/google-icon.png')} style={styles.socialIcon} />
                         </TouchableOpacity>
                     </View>
@@ -138,6 +217,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderWidth: 1,
         borderColor: '#DC3545',
+        marginBottom: 0
     },
     buttonText: {
         color: '#fff',
@@ -154,7 +234,7 @@ const styles = StyleSheet.create({
     socialText: {
         marginBottom: 1,
         color: '#DC3545',
-        fontWeight: 'bold'
+        fontWeight: 'medium'
     },
     socialButtons: {
         flexDirection: 'row',
@@ -175,9 +255,9 @@ const styles = StyleSheet.create({
         height: 40,
     },
     forgotPasswordText: {
+        marginBottom: 5,
         textAlign: 'center',
         color: '#DC3545',
-        marginTop: -7,
-        marginBottom: 10
+        fontWeight: 'bold'
     },
 });
