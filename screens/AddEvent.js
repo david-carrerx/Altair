@@ -1,52 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, StyleSheet, Text, Image, ScrollView, TouchableOpacity, Modal, FlatList } from 'react-native';
-// import * as ImagePicker from 'expo-image-picker';
+import { View, TextInput, StyleSheet, Text, TouchableOpacity, Modal, FlatList } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import { app } from '../config/firebase'; 
+import { getFirestore, collection, addDoc, GeoPoint } from "firebase/firestore";
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function AddEvent(props) {
   const [artistName, setArtistName] = useState('');
   const [eventName, setEventName] = useState('');
   const [eventCategory, setEventCategory] = useState('');
   const [eventDescription, setEventDescription] = useState('');
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [ticketPrices, setTicketPrices] = useState({
-    platinum: { price: '', quantity: '' },
-    gold: { price: '', quantity: '' },
-    silver: { price: '', quantity: '' },
-    bronze: { price: '', quantity: '' },
-  });
-  const [modalVisible, setModalVisible] = useState(false);
   const [categories, setCategories] = useState(['Rock', 'Pop', 'Jazz', 'Clásica', 'Reggaetón']);
   const [newCategory, setNewCategory] = useState('');
   const [fieldsFilled, setFieldsFilled] = useState(false);
-  // const [images, setImages] = useState([]);
+  const [destination, setDestination] = useState({ latitude: 24.033920, longitude: -104.645619 });
+  const [modalVisible, setModalVisible] = useState(false);
+  const [places, setPlaces] = useState([]);
+  const [searchInput, setSearchInput] = useState('');
 
   useEffect(() => {
     checkFields();
   }, [eventName, eventCategory, eventDescription]);
 
   const checkFields = () => {
-    if (eventName && eventCategory && eventDescription) {
-      setFieldsFilled(true);
-    } else {
-      setFieldsFilled(false);
-    }
-  };
-
-  const handleTicketChange = (category, key, value) => {
-    setTicketPrices(prevState => ({
-      ...prevState,
-      [category]: {
-        ...prevState[category],
-        [key]: value,
-      },
-    }));
-  };
-
-  const handleDateChange = (event, selectedDate) => {
-    const currentDate = selectedDate || date;
-    setShowDatePicker(false);
-    setSelectedDate(currentDate);
+    setFieldsFilled(eventName && eventCategory && eventDescription);
   };
 
   const handleClearFields = () => {
@@ -54,13 +31,6 @@ export default function AddEvent(props) {
     setEventName('');
     setEventCategory('');
     setEventDescription('');
-    setSelectedDate(new Date());
-    setTicketPrices({
-      platinum: { price: '', quantity: '' },
-      gold: { price: '', quantity: '' },
-      silver: { price: '', quantity: '' },
-      bronze: { price: '', quantity: '' },
-    });
     props.navigation.navigate('Events');
   };
 
@@ -77,46 +47,73 @@ export default function AddEvent(props) {
   );
 
   const handleAddNewCategory = () => {
-    if (newCategory.trim() !== '') {
-      setCategories(prevCategories => [...prevCategories, newCategory]);
+    if (newCategory.trim()) {
+      setCategories((prevCategories) => [...prevCategories, newCategory]);
       setEventCategory(newCategory);
       setModalVisible(false);
       setNewCategory('');
     }
   };
 
-  // const handleImageAdd = async () => {
-  //   let permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  //   if (permissionResult.granted === false) {
-  //     alert('Permission to access camera roll is required!');
-  //     return;
-  //   }
+  const fetchPlaces = async (input) => {
+    if (input.length > 2) {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${input}&key=AIzaSyCdcq28BPIbYHUOdnCYQB0BzoCjE75Z0iw`
+      );
+      const data = await response.json();
+      setPlaces(data.predictions);
+    }
+  };
 
-  //   let pickerResult = await ImagePicker.launchImageLibraryAsync({
-  //     mediaTypes: ImagePicker.MediaTypeOptions.All,
-  //     allowsEditing: true,
-  //     aspect: [4, 3],
-  //     quality: 1,
-  //   });
+  const handlePlaceSelect = async (placeId) => {
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=AIzaSyCdcq28BPIbYHUOdnCYQB0BzoCjE75Z0iw`
+    );
+    const data = await response.json();
+    const location = data.result.geometry.location;
+    setDestination({ latitude: location.lat, longitude: location.lng });
+    setPlaces([]);
+    setSearchInput(data.result.name);
+  };
 
-  //   if (!pickerResult.cancelled) {
-  //     const source = { uri: pickerResult.uri };
-  //     setImages(prevImages => [...prevImages, source]);
-  //   }
-  // };
+  const handleRegisterEvent = async () => {
+    try {
+      const firestore = getFirestore(app); 
+
+      await addDoc(collection(firestore, 'events'), {
+        artistName,
+        eventName,
+        eventCategory,
+        eventDescription,
+        location: new GeoPoint(destination.latitude, destination.longitude),
+      });
+
+      setArtistName('');
+      setEventName('');
+      setEventCategory('');
+      setEventDescription('');
+      setDestination({ latitude: 24.033920, longitude: -104.645619 }); 
+      setSearchInput('');
+      setPlaces([]);
+
+      props.navigation.navigate('Events');
+    } catch (error) {
+      console.error('Error al agregar el evento: ', error);
+    }
+  };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <KeyboardAwareScrollView contentContainerStyle={styles.container} enableOnAndroid={true}>
       <TextInput
         placeholder="Nombre del evento"
         style={styles.input}
-        onChangeText={text => setEventName(text)}
+        onChangeText={setEventName}
         value={eventName}
       />
       <TextInput
         placeholder="Nombre del artista o grupo"
         style={styles.input}
-        onChangeText={text => setArtistName(text)}
+        onChangeText={setArtistName}
         value={artistName}
       />
       <TouchableOpacity style={styles.pickerContainer} onPress={() => setModalVisible(true)}>
@@ -130,16 +127,12 @@ export default function AddEvent(props) {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <FlatList
-              data={categories}
-              renderItem={renderCategoryItem}
-              keyExtractor={(item) => item}
-            />
+            <FlatList data={categories} renderItem={renderCategoryItem} keyExtractor={(item) => item} />
             <View style={styles.addCategoryContainer}>
               <TextInput
                 placeholder="Otra"
                 style={styles.newCategoryInput}
-                onChangeText={text => setNewCategory(text)}
+                onChangeText={setNewCategory}
                 value={newCategory}
               />
               <TouchableOpacity style={styles.addButton} onPress={handleAddNewCategory}>
@@ -152,125 +145,54 @@ export default function AddEvent(props) {
       <TextInput
         placeholder="Descripción del evento"
         style={[styles.input, styles.textArea]}
-        onChangeText={text => setEventDescription(text)}
+        onChangeText={setEventDescription}
         value={eventDescription}
         multiline={true}
         numberOfLines={4}
       />
-      {/* 
-      <TouchableOpacity style={styles.imageContainer} onPress={handleImageAdd}>
-        <Image source={require('../assets/add.png')} style={styles.addImage} />
-        <Text style={styles.imageText}>Agrega al menos 3 imágenes del artista aquí</Text>
-      </TouchableOpacity>
-      <View style={styles.imageList}>
-        {images.map((image, index) => (
-          <Image key={index} source={image} style={styles.imageItem} />
-        ))}
-      </View> 
-      */}
+      <TextInput
+        placeholder="Buscar lugares"
+        style={styles.input}
+        onChangeText={(text) => {
+          setSearchInput(text);
+          fetchPlaces(text);
+        }}
+        value={searchInput}
+      />
+      {places.length > 0 && (
+        <FlatList
+          data={places}
+          renderItem={({ item }) => (
+            <TouchableOpacity onPress={() => handlePlaceSelect(item.place_id)} style={styles.placeItem}>
+              <Text style={styles.placeText}>{item.description}</Text>
+            </TouchableOpacity>
+          )}
+          keyExtractor={(item) => item.place_id}
+          style={styles.placesList}
+        />
+      )}
       <View style={styles.mapContainer}>
-        {/* Aquí irá el mapa interactivo */}
-      </View>
-      <View style={styles.complexContainer}>
-        <Image source={require('../assets/add.png')} style={styles.addImage} />
-        <Text style={styles.imageText}>Agrega imágenes del complejo aquí</Text>
-      </View>
-      <TextInput
-        placeholder="Fecha"
-        style={styles.input}
-        onChangeText={text => setEventCategory(text)}
-      />
-      <TextInput
-        placeholder="Hora"
-        style={styles.input}
-        onChangeText={text => setEventCategory(text)}
-      />
-      <View style={styles.ticketContainer}>
-        <View style={styles.ticketCategory}>
-          <Text style={styles.ticket}>Platino:</Text>
-          <TextInput
-            placeholder="Precio"
-            style={styles.ticketInput}
-            value={ticketPrices.platinum.price}
-            onChangeText={text => handleTicketChange('platinum', 'price', text.replace(/[^0-9.]/g, ''))} // Solo permitir números y el punto decimal
-            keyboardType="numeric"
-            maxLength={10} // Longitud máxima del campo
-            textAlign="right" // Alinear el texto a la derecha
+        <MapView
+          style={styles.map}
+          region={{
+            latitude: destination.latitude,
+            longitude: destination.longitude,
+            latitudeDelta: 0.09,
+            longitudeDelta: 0.04,
+          }}
+        >
+          <Marker
+            draggable
+            coordinate={destination}
+            onDragEnd={(e) => setDestination(e.nativeEvent.coordinate)}
           />
-          <TextInput
-            placeholder="Cantidad"
-            style={styles.ticketInput}
-            value={ticketPrices.platinum.quantity}
-            onChangeText={text => handleTicketChange('platinum', 'quantity', text.replace(/[^0-9]/g, ''))} // Solo permitir números
-            keyboardType="numeric"
-            maxLength={5} // Longitud máxima del campo
-          />
-        </View>
-        <View style={styles.ticketCategory}>
-          <Text style={styles.ticket}>Oro:       </Text>
-          <TextInput
-            placeholder="Precio"
-            style={styles.ticketInput}
-            value={ticketPrices.gold.price}
-            onChangeText={text => handleTicketChange('gold', 'price', text.replace(/[^0-9.]/g, ''))}
-            keyboardType="numeric"
-            maxLength={10}
-            textAlign="right"
-          />
-          <TextInput
-            placeholder="Cantidad"
-            style={styles.ticketInput}
-            value={ticketPrices.gold.quantity}
-            onChangeText={text => handleTicketChange('gold', 'quantity', text.replace(/[^0-9]/g, ''))}
-            keyboardType="numeric"
-            maxLength={5}
-          />
-        </View>
-        <View style={styles.ticketCategory}>
-          <Text style={styles.ticket}>Plata:    </Text>
-          <TextInput
-            placeholder="Precio"
-            style={styles.ticketInput}
-            value={ticketPrices.silver.price}
-            onChangeText={text => handleTicketChange('silver', 'price', text.replace(/[^0-9.]/g, ''))}
-            keyboardType="numeric"
-            maxLength={10}
-            textAlign="right"
-          />
-          <TextInput
-            placeholder="Cantidad"
-            style={styles.ticketInput}
-            value={ticketPrices.silver.quantity}
-            onChangeText={text => handleTicketChange('silver', 'quantity', text.replace(/[^0-9]/g, ''))}
-            keyboardType="numeric"
-            maxLength={5}
-          />
-        </View>
-        <View style={styles.ticketCategory}>
-          <Text style={styles.ticket}>Bronce:</Text>
-          <TextInput
-            placeholder="Precio"
-            style={styles.ticketInput}
-            value={ticketPrices.bronze.price}
-            onChangeText={text => handleTicketChange('bronze', 'price', text.replace(/[^0-9.]/g, ''))}
-            keyboardType="numeric"
-            maxLength={10}
-            textAlign="right"
-          />
-          <TextInput
-            placeholder="Cantidad"
-            style={styles.ticketInput}
-            value={ticketPrices.bronze.quantity}
-            onChangeText={text => handleTicketChange('bronze', 'quantity', text.replace(/[^0-9]/g, ''))}
-            keyboardType="numeric"
-            maxLength={5}
-          />
-        </View>
+        </MapView>
       </View>
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[styles.button, fieldsFilled ? null : styles.disabledButton]}
           disabled={!fieldsFilled}
+          onPress={handleRegisterEvent} 
         >
           <Text style={styles.buttonText}>Registrar evento</Text>
         </TouchableOpacity>
@@ -278,7 +200,7 @@ export default function AddEvent(props) {
           <Text style={[styles.buttonText, styles.cancelButtonText]}>Eliminar evento</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -360,25 +282,6 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: '#fff',
   },
-  imageContainer: {
-    width: '100%',
-    height: 150,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  addImage: {
-    width: 50,
-    height: 50,
-    marginBottom: 10,
-  },
-  imageText: {
-    fontSize: 14,
-    color: '#ccc',
-  },
   mapContainer: {
     width: '100%',
     height: 200,
@@ -387,43 +290,9 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 15,
   },
-  complexContainer: {
+  map: {
     width: '100%',
-    height: 150,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  ticketContainer: {
-    width: '100%',
-    marginBottom: 15,
-  },
-  ticketTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: 'red',
-  },
-  ticketCategory: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  ticketInput: {
-    width: '40%',
-    height: 40,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 5,
-    paddingHorizontal: 10,
-  },
-  ticket: {
-    color: '#949492',
-    fontWeight: 'bold',
+    height: '100%',
   },
   buttonContainer: {
     width: '100%',
@@ -452,15 +321,23 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: '#DC3545',
   },
-  imageList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  placesList: {
+    width: '100%',
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginBottom: 15,
   },
-  imageItem: {
-    width: '30%',
-    height: 100,
+  placeItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  placeText: {
+    fontSize: 16,
+  },
+  placeInfoText: {
+    fontSize: 16,
     marginBottom: 10,
   },
 });
-
