@@ -1,18 +1,48 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Image, TouchableOpacity, View } from 'react-native';
-import TicketsIcon from '../assets/ticket.png'; // Importa el ícono para Tickets
+import TicketsIcon from '../assets/ticket.png';
 import ProfileIcon from '../assets/user-icon.png';
 import EventsIcon from '../assets/event-icon.png';
-
-import Tickets from './Tickets'; // Importa Tickets en lugar de Profile
-import Profile from './Profile'; // Importa Profile
-import EventsStack from './EventsStack'; // Importa EventsStack en lugar de Events
+import Tickets from './Tickets';
+import Profile from './Profile';
+import EventsStack from './EventsStack';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 
 const Tab = createBottomTabNavigator();
 
 export default function HomeTabs() {
+    const auth = getAuth();
+    const db = getFirestore();
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (userAuth) => {
+            if (userAuth) {
+                const docRef = doc(db, 'users', userAuth.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    setUser(docSnap.data());
+                } else {
+                    console.log('No such document!');
+                }
+            } else {
+                setUser(null);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // Función para obtener el rol del usuario
+    const getRoleFromUser = () => {
+        if (user && user.role) {
+            return user.role.toLowerCase(); // Suponiendo que el rol está en minúsculas
+        }
+        return 'user'; // Si no se encuentra el rol, se asume que es 'user'
+    };
+
     return (
         <View style={{ flex: 1 }}>
             <Tab.Navigator
@@ -43,7 +73,7 @@ export default function HomeTabs() {
                     headerTitleStyle: {
                         color: 'white',
                         fontFamily: 'Joti One',
-                        fontWeight: 'bold'
+                        fontWeight: 'bold',
                     },
                     headerTitleAllowFontScaling: false,
                     headerTitle: 'ALTAIR',
@@ -56,6 +86,11 @@ export default function HomeTabs() {
 
                             if (route.name === 'EventsStack' && isFocused) {
                                 color = '#842029';
+                            }
+
+                            // Ocultar la pestaña de "Tickets" si el rol del usuario es "user"
+                            if (route.name === 'Tickets' && getRoleFromUser() === 'admin') {
+                                return null; // Devuelve null para no renderizar la pestaña
                             }
 
                             return (
