@@ -63,6 +63,7 @@ export default function Login() {
                         role: 'user',
                     };
                     await setDoc(doc(db, "users", user.uid), userData);
+                    console.log("Usuario autenticado con éxito. Rol:", userData.role); // Imprime el rol del usuario en la consola
                     Alert.alert("Iniciando sesión...", "Accediendo");
                     navigation.navigate('Home');
                 })
@@ -84,6 +85,7 @@ export default function Login() {
                 role: 'user',
             };
             await setDoc(doc(db, "users", user.uid), userData);
+            console.log("Usuario autenticado con éxito. Rol:", userData.role); // Imprime el rol del usuario en la consola
             Alert.alert("Iniciando sesión...", "Accediendo");
             navigation.navigate('Home');
         } catch (error) {

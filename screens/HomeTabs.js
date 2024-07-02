@@ -1,9 +1,13 @@
+
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Image, TouchableOpacity, View } from 'react-native';
+import TicketsIcon from '../assets/ticket.png'; // Importa el ícono para Tickets
 import ProfileIcon from '../assets/user-icon.png';
 import EventsIcon from '../assets/event-icon.png';
-import Profile from './Profile';
+
+import Tickets from './Tickets'; // Importa Tickets en lugar de Profile
+import Profile from './Profile'; // Importa Profile
 import EventsStack from './EventsStack'; // Importa EventsStack en lugar de Events
 
 const Tab = createBottomTabNavigator();
@@ -16,7 +20,9 @@ export default function HomeTabs() {
                     tabBarIcon: ({ focused }) => {
                         let iconName;
 
-                        if (route.name === 'Profile') {
+                        if (route.name === 'Tickets') {
+                            iconName = focused ? TicketsIcon : TicketsIcon;
+                        } else if (route.name === 'Profile') {
                             iconName = focused ? ProfileIcon : ProfileIcon;
                         } else if (route.name === 'EventsStack') {
                             iconName = focused ? EventsIcon : EventsIcon;
@@ -46,7 +52,7 @@ export default function HomeTabs() {
                     <View style={{ flexDirection: 'row', height: 50 }}>
                         {props.state.routes.map((route, index) => {
                             const isFocused = props.state.index === index;
-                            let color = isFocused ? (route.name === 'Profile' ? '#842029' : '#B02A37') : '#B02A37';
+                            let color = isFocused ? (route.name === 'Profile' || route.name === 'Tickets' ? '#842029' : '#B02A37') : '#B02A37';
 
                             if (route.name === 'EventsStack' && isFocused) {
                                 color = '#842029';
@@ -71,6 +77,7 @@ export default function HomeTabs() {
                 )}
             >
                 <Tab.Screen name="EventsStack" component={EventsStack} />
+                <Tab.Screen name="Tickets" component={Tickets} />
                 <Tab.Screen name="Profile" component={Profile} />
             </Tab.Navigator>
         </View>
