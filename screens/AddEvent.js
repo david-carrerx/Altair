@@ -1,9 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, StyleSheet, Text, TouchableOpacity, Modal, FlatList } from 'react-native';
+import { View, TextInput, StyleSheet, Text, TouchableOpacity, Modal, FlatList, Image } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { app } from '../config/firebase'; 
 import { getFirestore, collection, addDoc, GeoPoint } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function AddEvent(props) {
   const [artistName, setArtistName] = useState('');
@@ -17,13 +21,14 @@ export default function AddEvent(props) {
   const [modalVisible, setModalVisible] = useState(false);
   const [places, setPlaces] = useState([]);
   const [searchInput, setSearchInput] = useState('');
+  const [poster, setPoster] = useState(null);
 
   useEffect(() => {
     checkFields();
-  }, [eventName, eventCategory, eventDescription]);
+  }, [eventName, eventCategory, eventDescription, poster]);
 
   const checkFields = () => {
-    setFieldsFilled(eventName && eventCategory && eventDescription);
+    setFieldsFilled(eventName && eventCategory && eventDescription && poster);
   };
 
   const handleClearFields = () => {
@@ -31,6 +36,7 @@ export default function AddEvent(props) {
     setEventName('');
     setEventCategory('');
     setEventDescription('');
+    setPoster(null);
     props.navigation.navigate('Events');
   };
 
@@ -78,27 +84,54 @@ export default function AddEvent(props) {
 
   const handleRegisterEvent = async () => {
     try {
-      const firestore = getFirestore(app); 
-
+      const firestore = getFirestore(app);
+      const storage = getStorage(app);
+  
+      // Subir la imagen a Firebase Storage
+      const storageRef = ref(storage, `event_posters/${Date.now()}`);
+      await uploadBytes(storageRef, await fetch(poster).then((res) => res.blob()));
+  
+      // Obtener la URL de descarga de la imagen subida
+      const posterUrl = await getDownloadURL(storageRef);
+  
+      // Guardar los datos del evento en Firestore
       await addDoc(collection(firestore, 'events'), {
         artistName,
         eventName,
         eventCategory,
         eventDescription,
         location: new GeoPoint(destination.latitude, destination.longitude),
+        poster: posterUrl, // Guardar la URL de la imagen en Firestore
       });
-
+  
+      // Limpiar los estados después de guardar
       setArtistName('');
       setEventName('');
       setEventCategory('');
       setEventDescription('');
-      setDestination({ latitude: 24.033920, longitude: -104.645619 }); 
+      setPoster(null);
+      setDestination({ latitude: 24.033920, longitude: -104.645619 });
       setSearchInput('');
       setPlaces([]);
-
+  
+      // Navegar de regreso a la lista de eventos
       props.navigation.navigate('Events');
     } catch (error) {
       console.error('Error al agregar el evento: ', error);
+    }
+  };
+  
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.cancelled) {
+      setPoster(result.assets[0].uri);
     }
   };
 
@@ -150,6 +183,13 @@ export default function AddEvent(props) {
         multiline={true}
         numberOfLines={4}
       />
+      <TouchableOpacity style={styles.posterContainer} onPress={pickImage}>
+        {poster ? (
+          <Image source={{ uri: poster }} style={styles.posterImage} />
+        ) : (
+          <Text style={styles.posterText}>Subir póster del evento</Text>
+        )}
+      </TouchableOpacity>
       <TextInput
         placeholder="Buscar lugares"
         style={styles.input}
@@ -233,7 +273,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     justifyContent: 'center',
     paddingHorizontal: 10,
-    marginBottom: 15,
+    marginBottom: 15
   },
   pickerText: {
     fontSize: 16,
@@ -339,5 +379,24 @@ const styles = StyleSheet.create({
   placeInfoText: {
     fontSize: 16,
     marginBottom: 10,
+  },
+  posterContainer: {
+    width: '100%',
+    height: 200,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  posterText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  posterImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 5,
   },
 });
