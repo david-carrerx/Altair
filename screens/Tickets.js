@@ -16,7 +16,7 @@ export default function Tickets({ navigation }) {
                 if (docSnap.exists()) {
                     setUser(docSnap.data());
                 } else {
-                    console.log("No such document!");
+                    console.log("No such document!");   
                 }
             } else {
                 setUser(null);

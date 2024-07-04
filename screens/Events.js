@@ -1,9 +1,27 @@
-import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Text, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, TextInput, TouchableOpacity, StyleSheet, Text, Image, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons'; 
+import { getFirestore, collection, onSnapshot } from 'firebase/firestore';
+import { app } from '../config/firebase';
+
+const db = getFirestore(app);
 
 export default function Events({ navigation }) {
     const [searchQuery, setSearchQuery] = useState('');
+    const [events, setEvents] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, 'events'), (snapshot) => {
+            const eventsData = snapshot.docs.map(doc => doc.data());
+            setEvents(eventsData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching events: ", error);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     const handleSearch = () => {
         console.log('Searching for:', searchQuery);
@@ -12,6 +30,16 @@ export default function Events({ navigation }) {
     const handleAddEvent = () => {
         navigation.navigate('AddEvent');
     };
+
+    const renderEventItem = ({ item }) => (
+        <View style={styles.card}>
+            <Image source={{ uri: item.poster }} style={styles.eventPoster} />
+            <View style={styles.cardContent}>
+                <Text style={styles.eventName}>{item.eventName}</Text>
+                <Text style={styles.artistName}>{item.artistName}</Text>
+            </View>
+        </View>
+    );
 
     return (
         <View style={styles.container}>
@@ -29,10 +57,20 @@ export default function Events({ navigation }) {
             <TouchableOpacity style={styles.addButton} onPress={handleAddEvent}>
                 <Text style={styles.addButtonText}>Agregar Evento</Text>
             </TouchableOpacity>
-            <View style={styles.rectangle}>
-                <Image source={require('../assets/event.png')} style={styles.eventIcon} />
-                <Text style={styles.rectangleText}>Aquí aparecerán los eventos que agregues</Text>
-            </View>
+            {loading ? (
+                <Text>Cargando...</Text>
+            ) : events.length === 0 ? (
+                <View style={styles.rectangle}>
+                    <Image source={require('../assets/event.png')} style={styles.eventIcon} />
+                    <Text style={styles.rectangleText}>Aquí aparecerán los eventos que agregues</Text>
+                </View>
+            ) : (
+                <FlatList
+                    data={events}
+                    renderItem={renderEventItem}
+                    keyExtractor={(item, index) => index.toString()}
+                />
+            )}
         </View>
     );
 }
@@ -84,7 +122,6 @@ const styles = StyleSheet.create({
         borderStyle: 'dashed', 
         borderWidth: 2, 
         borderColor: '#B8B8B8' 
-        
     },
     eventIcon: {
         width: 50,
@@ -96,5 +133,29 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         color: '#B8B8B8',
         textAlign: 'center'
+    },
+    card: {
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        overflow: 'hidden',
+        marginVertical: 10,
+        borderWidth: 1,
+        borderColor: '#ccc',
+    },
+    eventPoster: {
+        width: '100%',
+        height: 200,
+    },
+    cardContent: {
+        padding: 10,
+    },
+    eventName: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 5,
+    },
+    artistName: {
+        fontSize: 14,
+        color: '#555',
     },
 });
