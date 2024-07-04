@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getFirestore, collection, onSnapshot } from 'firebase/firestore';
 import { app } from '../config/firebase';
 
+
 const db = getFirestore(app);
 
 export default function Events({ navigation }) {
@@ -13,7 +14,10 @@ export default function Events({ navigation }) {
 
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, 'events'), (snapshot) => {
-            const eventsData = snapshot.docs.map(doc => doc.data());
+            const eventsData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
             setEvents(eventsData);
             setLoading(false);
         }, (error) => {
@@ -37,6 +41,12 @@ export default function Events({ navigation }) {
             <View style={styles.cardContent}>
                 <Text style={styles.eventName}>{item.eventName}</Text>
                 <Text style={styles.artistName}>{item.artistName}</Text>
+                <Text style={styles.eventDate}>Fecha: {item.eventDate.toDate().toLocaleDateString()}</Text>
+                <View style={styles.locationContainer}>
+                <Ionicons name="location-outline" size={14} color="#555"/>
+                <Text style={styles.locationText}>{item.locationName}</Text>
+            </View>
+
             </View>
         </View>
     );
@@ -157,5 +167,22 @@ const styles = StyleSheet.create({
     artistName: {
         fontSize: 14,
         color: '#555',
+        fontWeight: 'bold'
+    },
+    eventDate: {
+        fontSize: 14,
+        color: '#555',
+    },
+    locationContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 5,
+        fontWeight: 'bold'
+    },
+    locationText: {
+        fontSize: 14,
+        color: '#555',
+        marginLeft: 5,
+       // Añadir margen para separar el ícono del texto
     },
 });

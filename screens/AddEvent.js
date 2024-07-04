@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { View, TextInput, StyleSheet, Text, TouchableOpacity, Modal, FlatList, Image } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import MapView, { Marker } from 'react-native-maps';
 import { app } from '../config/firebase'; 
 import { getFirestore, collection, addDoc, GeoPoint } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -22,13 +21,29 @@ export default function AddEvent(props) {
   const [places, setPlaces] = useState([]);
   const [searchInput, setSearchInput] = useState('');
   const [poster, setPoster] = useState(null);
+  const [eventDate, setEventDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [eventDateTime, setEventDateTime] = useState(new Date());
+  const [locationName, setLocationName] = useState('');
+const [showDateTimePicker, setShowDateTimePicker] = useState(false);
+
 
   useEffect(() => {
     checkFields();
-  }, [eventName, eventCategory, eventDescription, poster]);
+  }, [eventName, eventCategory, eventDescription, poster, eventDate]);
 
   const checkFields = () => {
-    setFieldsFilled(eventName && eventCategory && eventDescription && poster);
+    const currentDate = new Date();
+    const sixMonthsLater = new Date();
+    sixMonthsLater.setMonth(currentDate.getMonth() + 6);
+
+    setFieldsFilled(
+      eventName && 
+      eventCategory && 
+      eventDescription && 
+      poster && 
+      eventDate >= sixMonthsLater
+    );
   };
 
   const handleClearFields = () => {
@@ -37,6 +52,8 @@ export default function AddEvent(props) {
     setEventCategory('');
     setEventDescription('');
     setPoster(null);
+    setDestination({ latitude: 24.033920, longitude: -104.645619 });
+    setEventDate(new Date());
     props.navigation.navigate('Events');
   };
 
@@ -73,14 +90,15 @@ export default function AddEvent(props) {
 
   const handlePlaceSelect = async (placeId) => {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=AIzaSyCdcq28BPIbYHUOdnCYQB0BzoCjE75Z0iw`
+        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=AIzaSyCdcq28BPIbYHUOdnCYQB0BzoCjE75Z0iw`
     );
     const data = await response.json();
     const location = data.result.geometry.location;
     setDestination({ latitude: location.lat, longitude: location.lng });
     setPlaces([]);
     setSearchInput(data.result.name);
-  };
+    setLocationName(data.result.name); // Establecer el nombre de la ubicación aquí
+};
 
   const handleRegisterEvent = async () => {
     try {
@@ -101,6 +119,8 @@ export default function AddEvent(props) {
         eventCategory,
         eventDescription,
         location: new GeoPoint(destination.latitude, destination.longitude),
+        locationName, 
+        eventDate,
         poster: posterUrl, // Guardar la URL de la imagen en Firestore
       });
   
@@ -111,6 +131,8 @@ export default function AddEvent(props) {
       setEventDescription('');
       setPoster(null);
       setDestination({ latitude: 24.033920, longitude: -104.645619 });
+      setLocationName('');
+      setEventDate(new Date());
       setSearchInput('');
       setPlaces([]);
   
@@ -120,6 +142,7 @@ export default function AddEvent(props) {
       console.error('Error al agregar el evento: ', error);
     }
   };
+
   
 
   const pickImage = async () => {
@@ -190,6 +213,22 @@ export default function AddEvent(props) {
           <Text style={styles.posterText}>Subir póster del evento</Text>
         )}
       </TouchableOpacity>
+      <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.datePickerButton}>
+        <Text style={styles.datePickerText}>{eventDate.toDateString() || 'Seleccione una fecha'}</Text>
+      </TouchableOpacity>
+      {showDatePicker && (
+        <DateTimePicker
+          value={eventDate}
+          mode="date"
+          display="default"
+          onChange={(event, selectedDate) => {
+            const currentDate = selectedDate || eventDate;
+            setShowDatePicker(false);
+            setEventDate(currentDate);
+          }}
+          minimumDate={new Date(new Date().setMonth(new Date().getMonth() + 6))}
+        />
+      )}
       <TextInput
         placeholder="Buscar lugares"
         style={styles.input}
@@ -398,5 +437,20 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 5,
+  },
+  datePickerButton: {
+    width: '100%',
+    height: 40,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 5,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  datePickerText: {
+    fontSize: 16,
+    color: '#000',
   },
 });
