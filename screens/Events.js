@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, Text, Image, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons'; 
-import { getFirestore, collection, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '../config/firebase';
 
-
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 export default function Events({ navigation }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [userRole, setUserRole] = useState('user');
 
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, 'events'), (snapshot) => {
@@ -27,6 +29,25 @@ export default function Events({ navigation }) {
         return () => unsubscribe();
     }, []);
 
+    useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const docRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const userData = docSnap.data();
+                    setUserRole(userData.role.toLowerCase());
+                } else {
+                    console.log('No such document!');
+                }
+            } else {
+                setUserRole('user');
+            }
+        });
+
+        return () => unsubscribeAuth();
+    }, []);
+
     const handleSearch = () => {
         console.log('Searching for:', searchQuery);
     };
@@ -35,20 +56,30 @@ export default function Events({ navigation }) {
         navigation.navigate('AddEvent');
     };
 
-    const renderEventItem = ({ item }) => (
-        <View style={styles.card}>
-            <Image source={{ uri: item.poster }} style={styles.eventPoster} />
-            <View style={styles.cardContent}>
-                <Text style={styles.eventName}>{item.eventName}</Text>
-                <Text style={styles.artistName}>{item.artistName}</Text>
-                <Text style={styles.eventDate}>Fecha: {item.eventDate.toDate().toLocaleDateString()}</Text>
-                <View style={styles.locationContainer}>
-                <Ionicons name="location-outline" size={14} color="#555"/>
-                <Text style={styles.locationText}>{item.locationName}</Text>
-            </View>
+    const handleSeeEvent = (eventId) => {
+        navigation.navigate('SeeEvent', { eventId });
+    };
 
+    const renderEventItem = ({ item }) => (
+        <TouchableOpacity onPress={() => handleSeeEvent(item.id)}>
+            <View style={styles.card}>
+                <Image source={{ uri: item.poster }} style={styles.eventPoster} />
+                <View style={styles.cardContent}>
+                    <Text style={styles.eventName}>{item.eventName}</Text>
+                    <Text style={styles.artistName}>{item.artistName}</Text>
+                    <Text style={styles.eventDate}>Fecha: {item.eventDate.toDate().toLocaleDateString()}</Text>
+                    <View style={styles.locationContainer}>
+                        <Ionicons name="location-outline" size={14} color="#555"/>
+                        <Text style={styles.locationText}>{item.locationName}</Text>
+                    </View>
+                </View>
             </View>
-        </View>
+        </TouchableOpacity> 
+    );
+
+    const filteredEvents = events.filter(event => 
+        event.eventName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        event.artistName.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
@@ -64,19 +95,25 @@ export default function Events({ navigation }) {
                     <Ionicons name="search" size={18} color="#fff" />
                 </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.addButton} onPress={handleAddEvent}>
-                <Text style={styles.addButtonText}>Agregar Evento</Text>
-            </TouchableOpacity>
+            {userRole === 'admin' && (
+                <TouchableOpacity style={styles.addButton} onPress={handleAddEvent}>
+                    <Text style={styles.addButtonText}>Agregar Evento</Text>
+                </TouchableOpacity>
+            )}
             {loading ? (
                 <Text>Cargando...</Text>
-            ) : events.length === 0 ? (
+            ) : filteredEvents.length === 0 ? (
                 <View style={styles.rectangle}>
                     <Image source={require('../assets/event.png')} style={styles.eventIcon} />
-                    <Text style={styles.rectangleText}>Aquí aparecerán los eventos que agregues</Text>
+                    <Text style={styles.rectangleText}>
+                        {userRole === 'admin' 
+                            ? 'Aquí aparecerán los eventos que agregues' 
+                            : 'No hay eventos disponibles'}
+                    </Text>
                 </View>
             ) : (
                 <FlatList
-                    data={events}
+                    data={filteredEvents}
                     renderItem={renderEventItem}
                     keyExtractor={(item, index) => index.toString()}
                 />

@@ -13,7 +13,18 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.david.altair"
+      "bundleIdentifier": "com.david.altair",
+      "infoPlist": {
+        "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you.",
+        "SKAdNetworkItems": [
+          {
+            "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "n38lu8286q.skadnetwork"
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -32,6 +43,11 @@
     ],
     "plugins": [
       "expo-facebook"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a3845494-29c6-4608-aac0-6d9aa4d1e94a"
+      }
+    }
   }
 }

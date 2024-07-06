@@ -18,6 +18,8 @@ PODS:
   - EXImageLoader (4.7.0):
     - ExpoModulesCore
     - React-Core
+  - EXLocation (17.0.1):
+    - ExpoModulesCore
   - Expo (51.0.8):
     - ExpoModulesCore
   - ExpoAdapterGoogleSignIn (12.2.1):
@@ -1034,7 +1036,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - react-native-maps (1.15.6):
+  - react-native-maps (1.14.0):
     - React-Core
   - react-native-safe-area (0.5.1):
     - React
@@ -1354,6 +1356,7 @@ DEPENDENCIES:
   - EXConstants (from `../node_modules/expo-constants/ios`)
   - EXFacebook (from `../node_modules/expo-facebook/ios`)
   - EXImageLoader (from `../node_modules/expo-image-loader/ios`)
+  - EXLocation (from `../node_modules/expo-location/ios`)
   - Expo (from `../node_modules/expo`)
   - "ExpoAdapterGoogleSignIn (from `../node_modules/@react-native-google-signin/google-signin/expo/ios`)"
   - ExpoAsset (from `../node_modules/expo-asset/ios`)
@@ -1454,6 +1457,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-facebook/ios"
   EXImageLoader:
     :path: "../node_modules/expo-image-loader/ios"
+  EXLocation:
+    :path: "../node_modules/expo-location/ios"
   Expo:
     :path: "../node_modules/expo"
   ExpoAdapterGoogleSignIn:
@@ -1612,6 +1617,7 @@ SPEC CHECKSUMS:
   EXConstants: 9a008dbf262550884e6280dea95b81b51f65ea6f
   EXFacebook: 7ba828e0aac5f3aa6c10d8fce7652a3eaf63466a
   EXImageLoader: ab589d67d6c5f2c33572afea9917304418566334
+  EXLocation: 43e9b582ca63a23c6f0a18d8cbe2145b3a388b55
   Expo: c99f14ca53381d5399b88684c88e20ff7928d3c7
   ExpoAdapterGoogleSignIn: 20e6be8bff6e951607ace66e6d3d11b30f2e9e3a
   ExpoAsset: 9b7433ecc5f1b608ccbb823492e062bde944abd2
@@ -1656,7 +1662,7 @@ SPEC CHECKSUMS:
   React-logger: 7e7403a2b14c97f847d90763af76b84b152b6fce
   React-Mapbuffer: 11029dcd47c5c9e057a4092ab9c2a8d10a496a33
   react-native-image-picker: c3afe5472ef870d98a4b28415fc0b928161ee5f7
-  react-native-maps: 7b2c2cee95271592a92ba485eea1dec66a363a6e
+  react-native-maps: cbf2f03bfeebfd7ec45966b066db13a075fd2af3
   react-native-safe-area: e8230b0017d76c00de6b01e2412dcf86b127c6a3
   react-native-safe-area-context: b01d8f42d4e62a7be5a3e69fd332e0c7e67584c7
   React-nativeconfig: b0073a590774e8b35192fead188a36d1dca23dec

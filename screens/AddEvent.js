@@ -8,6 +8,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import * as ImagePicker from 'expo-image-picker';
 
+
 export default function AddEvent(props) {
   const [artistName, setArtistName] = useState('');
   const [eventName, setEventName] = useState('');
