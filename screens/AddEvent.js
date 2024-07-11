@@ -7,7 +7,7 @@ import { getFirestore, collection, addDoc, GeoPoint } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import * as ImagePicker from 'expo-image-picker';
-
+import SeatSelection from './SeatSelection'; // Importa el nuevo componente
 
 export default function AddEvent(props) {
   const [artistName, setArtistName] = useState('');
@@ -268,6 +268,10 @@ const [showDateTimePicker, setShowDateTimePicker] = useState(false);
           />
         </MapView>
       </View>
+      
+      <SeatSelection /> 
+      
+      
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[styles.button, fieldsFilled ? null : styles.disabledButton]}
