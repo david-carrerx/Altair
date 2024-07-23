@@ -27,6 +27,8 @@ export default function AddEvent(props) {
   const [eventDateTime, setEventDateTime] = useState(new Date());
   const [locationName, setLocationName] = useState('');
 const [showDateTimePicker, setShowDateTimePicker] = useState(false);
+const [seats, setSeats] = useState([]); // Estado para almacenar los asientos seleccionados
+
 
 
   useEffect(() => {
@@ -101,48 +103,57 @@ const [showDateTimePicker, setShowDateTimePicker] = useState(false);
     setLocationName(data.result.name); // Establecer el nombre de la ubicación aquí
 };
 
-  const handleRegisterEvent = async () => {
-    try {
-      const firestore = getFirestore(app);
-      const storage = getStorage(app);
-  
-      // Subir la imagen a Firebase Storage
-      const storageRef = ref(storage, `event_posters/${Date.now()}`);
-      await uploadBytes(storageRef, await fetch(poster).then((res) => res.blob()));
-  
-      // Obtener la URL de descarga de la imagen subida
-      const posterUrl = await getDownloadURL(storageRef);
-  
-      // Guardar los datos del evento en Firestore
-      await addDoc(collection(firestore, 'events'), {
-        artistName,
-        eventName,
-        eventCategory,
-        eventDescription,
-        location: new GeoPoint(destination.latitude, destination.longitude),
-        locationName, 
-        eventDate,
-        poster: posterUrl, // Guardar la URL de la imagen en Firestore
-      });
-  
-      // Limpiar los estados después de guardar
-      setArtistName('');
-      setEventName('');
-      setEventCategory('');
-      setEventDescription('');
-      setPoster(null);
-      setDestination({ latitude: 24.033920, longitude: -104.645619 });
-      setLocationName('');
-      setEventDate(new Date());
-      setSearchInput('');
-      setPlaces([]);
-  
-      // Navegar de regreso a la lista de eventos
-      props.navigation.navigate('Events');
-    } catch (error) {
-      console.error('Error al agregar el evento: ', error);
-    }
-  };
+const handleRegisterEvent = async () => {
+  try {
+    const firestore = getFirestore(app);
+    const storage = getStorage(app);
+    
+    // Subir la imagen a Firebase Storage
+    const storageRef = ref(storage, `event_posters/${Date.now()}`);
+    await uploadBytes(storageRef, await fetch(poster).then((res) => res.blob()));
+    
+    // Obtener la URL de descarga de la imagen subida
+    const posterUrl = await getDownloadURL(storageRef);
+
+    // Guardar los datos del evento en Firestore
+    await addDoc(collection(firestore, 'events'), {
+      artistName,
+      eventName,
+      eventCategory,
+      eventDescription,
+      location: new GeoPoint(destination.latitude, destination.longitude),
+      locationName,
+      eventDate,
+      poster: posterUrl, // Guardar la URL de la imagen en Firestore
+      seats: seats.flatMap((row, rowIndex) => 
+        row.map((seat, colIndex) => ({
+          row: rowIndex,
+          col: colIndex,
+          category: seat.category,
+          isAvailable: seat.isAvailable
+        }))
+      )
+    });
+
+    // Limpiar los estados después de guardar
+    setArtistName('');
+    setEventName('');
+    setEventCategory('');
+    setEventDescription('');
+    setPoster(null);
+    setDestination({ latitude: 24.033920, longitude: -104.645619 });
+    setLocationName('');
+    setEventDate(new Date());
+    setSearchInput('');
+    setPlaces([]);
+    
+    // Navegar de regreso a la lista de eventos
+    props.navigation.navigate('Events');
+  } catch (error) {
+    console.error('Error al agregar el evento: ', error);
+  }
+};
+
 
   
 
@@ -269,7 +280,8 @@ const [showDateTimePicker, setShowDateTimePicker] = useState(false);
         </MapView>
       </View>
       
-      <SeatSelection /> 
+      <SeatSelection onSeatsChange={setSeats} />
+
       
       
       <View style={styles.buttonContainer}>

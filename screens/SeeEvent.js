@@ -9,6 +9,8 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 export default function SeeEvent({ route, navigation }) {
   const { eventId } = route.params; // Obtener el ID del evento de los parámetros de navegación
   const [eventData, setEventData] = useState(null);
+  const [seats, setSeats] = useState([]);
+
 
   useEffect(() => {
     const fetchEventData = async () => {
