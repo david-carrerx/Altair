@@ -114,7 +114,6 @@ export default function SeatSelection({ onSeatsChange }) {
       <View style={styles.categoryContainer}>
         {Object.keys(categories).map(category => (
           <View key={category} style={styles.categoryInputContainer}>
-            <Text style={styles.categoryLabel}>{category}</Text>
             <TextInput
               style={styles.categoryInput}
               keyboardType="numeric"

@@ -279,6 +279,12 @@ const handleRegisterEvent = async () => {
           />
         </MapView>
       </View>
+      <View style={styles.instructionContainer}>
+  <Text style={styles.instructionText}>
+    Seleccione la cantidad de asientos disponibles por categoría
+  </Text>
+</View>
+
       
       <SeatSelection onSeatsChange={setSeats} />
 
@@ -377,6 +383,20 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: '#fff',
+  },
+  instructionContainer: {
+    width: '100%', // Asegúrate de que el contenedor ocupe todo el ancho disponible
+    marginBottom: 10,
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  instructionText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#DC3545',
+    paddingHorizontal: 10,
+    width: '100%', // Asegúrate de que el texto ocupe el mismo ancho que el contenedor
+    textAlign: 'center', // Centra el texto horizontalmente
   },
   mapContainer: {
     width: '100%',
