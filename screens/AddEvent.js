@@ -33,19 +33,22 @@ const [seats, setSeats] = useState([]); // Estado para almacenar los asientos se
 
   useEffect(() => {
     checkFields();
-  }, [eventName, eventCategory, eventDescription, poster, eventDate]);
+  }, [eventName, eventCategory, eventDescription, poster, eventDate, seats]);
 
   const checkFields = () => {
     const currentDate = new Date();
     const sixMonthsLater = new Date();
     sixMonthsLater.setMonth(currentDate.getMonth() + 6);
+    const allSeatsSelected = seats.flat().every(seat => seat.category !== ''); // Asegura que todos los asientos tengan una categoría asignada
+
 
     setFieldsFilled(
       eventName && 
       eventCategory && 
       eventDescription && 
       poster && 
-      eventDate >= sixMonthsLater
+      eventDate >= sixMonthsLater && 
+      allSeatsSelected
     );
   };
 
@@ -130,7 +133,7 @@ const handleRegisterEvent = async () => {
           row: rowIndex,
           col: colIndex,
           category: seat.category,
-          isAvailable: seat.isAvailable
+          isAvailable: true
         }))
       )
     });
@@ -284,9 +287,16 @@ const handleRegisterEvent = async () => {
     Seleccione la cantidad de asientos disponibles por categoría
   </Text>
 </View>
-
-      
-      <SeatSelection onSeatsChange={setSeats} />
+<View style={styles.categoryBar}>
+  <Text style={[styles.categoryText, { backgroundColor: '#e5e4e2' }]}>Platino</Text>
+  <Text style={[styles.categoryText, { backgroundColor: '#FFD700' }]}>Oro</Text>
+  <Text style={[styles.categoryText, { backgroundColor: '#C0C0C0' }]}>Plata</Text>
+  <Text style={[styles.categoryText, { backgroundColor: '#CD7F32' }]}>Bronce</Text>
+</View>
+<View style={styles.containerSeats}>
+  <SeatSelection style={styles.alignSeats} seats={seats}  onSeatsChange={setSeats} />
+  
+</View>
 
       
       
@@ -335,7 +345,8 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     justifyContent: 'center',
     paddingHorizontal: 10,
-    marginBottom: 15
+    marginBottom: 15,
+    color: '#000'
   },
   pickerText: {
     fontSize: 16,
@@ -490,4 +501,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
   },
+  categoryBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 0,
+    borderRadius: 5,
+    overflow: 'hidden'
+  },
+  categoryText: {
+    width: 80,
+    textAlign: 'center',
+    fontSize:11.2,
+    padding: 4,
+    borderRadius: 5,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  containerSeats:{
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  alignSeats:{
+    alignSelf: 'center'
+  }
 });

@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, StyleSheet, Text, TouchableOpacity, Modal, FlatList, Image } from 'react-native';
+import { View, TextInput, StyleSheet, Text, TouchableOpacity, Image } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { doc, getDoc } from 'firebase/firestore';
 import { app } from '../config/firebase'; 
-import { getFirestore, GeoPoint } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function SeeEvent({ route, navigation }) {
   const { eventId } = route.params; // Obtener el ID del evento de los parámetros de navegación
   const [eventData, setEventData] = useState(null);
-  const [seats, setSeats] = useState([]);
-
+  const [seats, setSeats] = useState([]); // Estado para los asientos
 
   useEffect(() => {
     const fetchEventData = async () => {
@@ -21,6 +20,9 @@ export default function SeeEvent({ route, navigation }) {
 
         if (docSnap.exists()) {
           setEventData(docSnap.data());
+          if (docSnap.data().seats) {
+            setSeats(docSnap.data().seats); // Set the seats if they exist
+          }
         } else {
           console.log('No such document!');
         }
@@ -32,6 +34,47 @@ export default function SeeEvent({ route, navigation }) {
     fetchEventData();
   }, [eventId]);
 
+  const renderSeats = () => {
+    const seatRows = seats.reduce((rows, seat) => {
+      rows[seat.row] = rows[seat.row] || [];
+      rows[seat.row].push(seat);
+      return rows;
+    }, {});
+
+    return Object.keys(seatRows).map((row) => (
+      <View key={row} style={styles.seatRow}>
+        {seatRows[row].map((seat) => (
+          <View
+            key={`${seat.row}-${seat.col}`}
+            style={[
+              styles.seat,
+              {
+                backgroundColor: seat.isAvailable
+                  ? getSeatColor(seat.category)
+                  : 'red',
+              },
+            ]}
+          />
+        ))}
+      </View>
+    ));
+  };
+
+  const getSeatColor = (category) => {
+    switch (category) {
+      case 'platino':
+        return '#e5e4e2';
+      case 'oro':
+        return '#FFD700';
+      case 'plata':
+        return '#C0C0C0';
+      case 'bronce':
+        return '#CD7F32';
+      default:
+        return '#fff';
+    }
+  };
+
   if (!eventData) {
     return (
       <View style={styles.loadingContainer}>
@@ -42,7 +85,7 @@ export default function SeeEvent({ route, navigation }) {
 
   return (
     <KeyboardAwareScrollView contentContainerStyle={styles.container} enableOnAndroid={true}>
-        <View style={styles.posterContainer}>
+      <View style={styles.posterContainer}>
         {eventData.poster ? (
           <Image source={{ uri: eventData.poster }} style={styles.posterImage} />
         ) : (
@@ -75,7 +118,6 @@ export default function SeeEvent({ route, navigation }) {
         numberOfLines={4}
         editable={false}
       />
-      
       <TextInput
         placeholder="Fecha del evento"
         style={styles.input}
@@ -106,6 +148,22 @@ export default function SeeEvent({ route, navigation }) {
           />
         </MapView>
       </View>
+      <TextInput
+        placeholder="Selección de asientos"
+        style={styles.input}
+        placeholderTextColor="#000" 
+        editable={false}
+      />
+      <View style={styles.categoryBar}>
+  <Text style={[styles.categoryText, { backgroundColor: '#e5e4e2' }]}>Platino</Text>
+  <Text style={[styles.categoryText, { backgroundColor: '#FFD700' }]}>Oro</Text>
+  <Text style={[styles.categoryText, { backgroundColor: '#C0C0C0' }]}>Plata</Text>
+  <Text style={[styles.categoryText, { backgroundColor: '#CD7F32' }]}>Bronce</Text>
+  <Text style={[styles.categoryText, { backgroundColor: 'red' }]}>Ocupado</Text>
+</View>
+
+      <View style={styles.seatContainer}>{renderSeats()}</View>
+     
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => navigation.goBack()}>
           <Text style={[styles.buttonText, styles.cancelButtonText]}>Volver</Text>
@@ -132,6 +190,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     width: '100%',
     backgroundColor: '#f5f5f5',
+    color: '#000'
   },
   textArea: {
     height: 100,
@@ -194,4 +253,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  seatsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#DC3545'
+  },
+  seatContainer: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  seatRow: {
+    flexDirection: 'row',
+    marginBottom: 5,
+  },
+  seat: {
+    width: 30,
+    height: 30,
+    margin: 2,
+    borderRadius: 3,
+  },
+  categoryBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 15,
+    borderRadius: 5,
+    overflow: 'hidden'
+  },
+  categoryText: {
+    width: 60,
+    textAlign: 'center',
+    fontSize:11.2,
+    padding: 4,
+    borderRadius: 5,
+    color: '#fff',
+    fontWeight: 'bold',
+  }
+  
 });

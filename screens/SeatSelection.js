@@ -6,10 +6,10 @@ const numCols = 5;
 const maxTotalSeats = 25;
 
 const initialCategories = {
-  platino: { color: 'gray', seats: 0 },
-  oro: { color: '#e6a612', seats: 0 },
-  plata: { color: '#bbbb', seats: 0 },
-  bronce: { color: '#b56d5e', seats: 0 },
+  platino: { color: '#e5e4e2', seats: 0 },
+  oro: { color: '#FFD700', seats: 0 },
+  plata: { color: '#C0C0C0', seats: 0 },
+  bronce: { color: '#CD7F32', seats: 0 },
 };
 
 const initialSeats = Array.from({ length: numRows }, () =>
@@ -151,17 +151,20 @@ export default function SeatSelection({ onSeatsChange }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 10,
   },
   row: {
     flexDirection: 'row',
   },
   seat: {
-    width: 19.5,
-    height: 19.5,
-    margin: 2,
+    width: 30, // Ajusta el tamaño según lo que necesites
+    height: 30, // Ajusta el tamaño según lo que necesites
+    margin: 2, // Ajusta el margen según lo que necesites
     borderWidth: 1,
     borderColor: '#ccc',
+    borderRadius: 5, // Si en SeeEvent usas bordes redondeados
   },
   categoryContainer: {
     flexDirection: 'row',
@@ -181,8 +184,12 @@ const styles = StyleSheet.create({
   categoryInput: {
     width: 50,
     height: 30,
+    margin: 11,
+    marginTop: 0,
+    marginBottom: 0,
     borderWidth: 1,
     borderColor: '#ccc',
+    borderRadius: 5,
     textAlign: 'center',
   },
   categoryButton: {
@@ -198,3 +205,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
