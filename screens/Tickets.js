@@ -1,42 +1,72 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image, FlatList } from 'react-native';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 
 export default function Tickets({ navigation }) {
     const auth = getAuth();
     const db = getFirestore();
     const [user, setUser] = useState(null);
+    const [tickets, setTickets] = useState([]);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (userAuth) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (userAuth) => {
             if (userAuth) {
                 const docRef = doc(db, "users", userAuth.uid);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setUser(docSnap.data());
-                } else {
-                    console.log("No such document!");   
-                }
+                getDoc(docRef).then(docSnap => {
+                    if (docSnap.exists()) {
+                        setUser(docSnap.data());
+                        
+                        // Obtener boletos comprados del usuario en tiempo real
+                        const ticketsQuery = query(
+                            collection(db, "tickets"),
+                            where("userId", "==", userAuth.uid)
+                        );
+                        const unsubscribeTickets = onSnapshot(ticketsQuery, (querySnapshot) => {
+                            const ticketsData = querySnapshot.docs.map(doc => doc.data());
+                            setTickets(ticketsData);
+                        });
+
+                        // Cleanup subscriptions on unmount
+                        return () => {
+                            unsubscribeTickets();
+                        };
+                    } else {
+                        console.log("No such document!");   
+                    }
+                }).catch(error => console.error("Error getting user data: ", error));
             } else {
                 setUser(null);
             }
         });
 
-        return () => unsubscribe();
-    }, []);
+        // Cleanup subscription on unmount
+        return () => {
+            unsubscribeAuth();
+        };
+    }, [auth, db]);
+
+    const renderTicket = ({ item }) => (
+        <View style={styles.card}>
+            <Image source={{ uri: item.poster }} style={styles.posterImage} />
+            <View style={styles.cardContent}>
+                <Text style={styles.categoryText}>Categoría: {item.seat.category}</Text>
+                <Text style={styles.seatText}>Asiento: {item.seat.row}-{item.seat.col}</Text>
+            </View>
+        </View>
+    );
 
     return (
         <View style={styles.container}>
-            <Text>Tickets</Text>
-            <View style={styles.profileContainer}>
-                {user && (
-                    <>
-                        <Text style={styles.userRole}>{user.role}</Text>
-                    </>
-                )}
-                
-            </View>
+            <Text style={styles.title}>Mis Boletos</Text>
+            {user && (
+                <FlatList
+                    data={tickets}
+                    renderItem={renderTicket}
+                    keyExtractor={(item, index) => index.toString()}
+                    contentContainerStyle={styles.list}
+                />
+            )}
         </View>
     );
 }
@@ -45,31 +75,50 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#fff'
+        backgroundColor: '#fff',
     },
-    profileContainer: {
-        alignItems: 'center',
-    },
-    userRole: {
-        marginTop: 5,
+    title: {
+        fontSize: 24,
+        fontWeight: 'bold',
         marginBottom: 10,
-        color: '#DC3545',
-        fontSize: 16,
-        fontWeight: '500',
+        color: '#842029',
+        textAlign: 'center'
     },
-    button: {
-        backgroundColor: '#DC3545',
-        borderRadius: 5,
-        padding: 10,
-        width: 200,
+    list: {
+        flexGrow: 1,
+        justifyContent: 'flex-start',
+    },
+    card: {
+        flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 20,
+        backgroundColor: '#fafafa',
+        borderRadius: 5,
+        marginBottom: 15,
+        padding: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+        // Optional: Adjust width if needed
+        width: '100%',
     },
-    buttonText: {
-        color: '#fff',
+    posterImage: {
+        width: 100,
+        height: 100,
+        borderRadius: 5,
+        marginRight: 10,
+    },
+    cardContent: {
+        flex: 1,
+    },
+    categoryText: {
         fontSize: 16,
+        color: '#000',
         fontWeight: '500',
+    },
+    seatText: {
+        fontSize: 14,
+        color: '#333',
     },
 });

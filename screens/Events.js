@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet, Text, Image, FlatList } from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, Text, Image, FlatList, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons'; 
-import { getFirestore, collection, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '../config/firebase';
 
@@ -13,6 +13,28 @@ export default function Events({ navigation }) {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [userRole, setUserRole] = useState('user');
+    const [userId, setUserId] = useState('');
+
+    useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                setUserId(user.uid); // Almacena el ID del usuario
+                const docRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const userData = docSnap.data();
+                    setUserRole(userData.role.toLowerCase());
+                } else {
+                    console.log('No such document!');
+                }
+            } else {
+                setUserRole('user');
+                setUserId('');
+            }
+        });
+
+        return () => unsubscribeAuth();
+    }, []);
 
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, 'events'), (snapshot) => {
@@ -29,25 +51,6 @@ export default function Events({ navigation }) {
         return () => unsubscribe();
     }, []);
 
-    useEffect(() => {
-        const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const docRef = doc(db, 'users', user.uid);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    const userData = docSnap.data();
-                    setUserRole(userData.role.toLowerCase());
-                } else {
-                    console.log('No such document!');
-                }
-            } else {
-                setUserRole('user');
-            }
-        });
-
-        return () => unsubscribeAuth();
-    }, []);
-
     const handleSearch = () => {
         console.log('Searching for:', searchQuery);
     };
@@ -58,6 +61,31 @@ export default function Events({ navigation }) {
 
     const handleSeeEvent = (eventId) => {
         navigation.navigate('SeeEvent', { eventId });
+    };
+
+    const handleCancelEvent = (eventId) => {
+        Alert.alert(
+            "Confirmar Cancelación",
+            "¿Estás seguro de que quieres cancelar este evento?",
+            [
+                {
+                    text: "Cancelar",
+                    style: "cancel"
+                },
+                {
+                    text: "Sí",
+                    onPress: async () => {
+                        try {
+                            const eventRef = doc(db, 'events', eventId);
+                            await updateDoc(eventRef, { eventAvailable: false });
+                            console.log("Evento cancelado correctamente");
+                        } catch (error) {
+                            console.error("Error cancelando el evento: ", error);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const renderEventItem = ({ item }) => (
@@ -72,14 +100,24 @@ export default function Events({ navigation }) {
                         <Ionicons name="location-outline" size={14} color="#555"/>
                         <Text style={styles.locationText}>{item.locationName}</Text>
                     </View>
+                    {item.userId === userId && (
+                        <>
+                            <Text style={styles.ownershipLabel}>Este evento te pertenece</Text>
+                            <TouchableOpacity style={styles.cancelButton} onPress={() => handleCancelEvent(item.id)}>
+                                <Text style={styles.cancelButtonText}>Cancelar Evento</Text>
+                            </TouchableOpacity>
+                        </>
+                    )}
                 </View>
             </View>
-        </TouchableOpacity> 
+        </TouchableOpacity>
     );
 
     const filteredEvents = events.filter(event => 
-        event.eventName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        event.artistName.toLowerCase().includes(searchQuery.toLowerCase())
+        event.eventAvailable && (
+            event.eventName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            event.artistName.toLowerCase().includes(searchQuery.toLowerCase())
+        )
     );
 
     return (
@@ -214,12 +252,28 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginTop: 5,
-        fontWeight: 'bold'
     },
     locationText: {
         fontSize: 14,
         color: '#555',
         marginLeft: 5,
-       // Añadir margen para separar el ícono del texto
+    },
+    ownershipLabel: {
+        marginTop: 10,
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#DC3545',
+    },
+    cancelButton: {
+        marginTop: 10,
+        backgroundColor: '#DC3545',
+        borderRadius: 5,
+        padding: 10,
+        alignItems: 'center',
+    },
+    cancelButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '500',
     },
 });

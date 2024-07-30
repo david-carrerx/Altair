@@ -140,6 +140,7 @@ const handleRegisterEvent = async () => {
 
     // Guardar los datos del evento en Firestore
     await addDoc(collection(firestore, 'events'), {
+      eventAvailable: true,
       artistName,
       eventName,
       eventCategory,
