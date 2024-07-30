@@ -8,6 +8,8 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import * as ImagePicker from 'expo-image-picker';
 import SeatSelection from './SeatSelection'; // Importa el nuevo componente
+import { getAuth } from 'firebase/auth';
+
 
 export default function AddEvent(props) {
   const [artistName, setArtistName] = useState('');
@@ -28,6 +30,12 @@ export default function AddEvent(props) {
   const [locationName, setLocationName] = useState('');
 const [showDateTimePicker, setShowDateTimePicker] = useState(false);
 const [seats, setSeats] = useState([]); // Estado para almacenar los asientos seleccionados
+const [seatPrices, setSeatPrices] = useState({
+  platino: '',
+  oro: '',
+  plata: '',
+  bronce: ''
+});
 
 
 
@@ -40,7 +48,7 @@ const [seats, setSeats] = useState([]); // Estado para almacenar los asientos se
     const sixMonthsLater = new Date();
     sixMonthsLater.setMonth(currentDate.getMonth() + 6);
     const allSeatsSelected = seats.flat().every(seat => seat.category !== ''); // Asegura que todos los asientos tengan una categoría asignada
-
+    const allPricesSet = Object.values(seatPrices).every(price => price && parseFloat(price) > 0);
 
     setFieldsFilled(
       eventName && 
@@ -48,7 +56,8 @@ const [seats, setSeats] = useState([]); // Estado para almacenar los asientos se
       eventDescription && 
       poster && 
       eventDate >= sixMonthsLater && 
-      allSeatsSelected
+      allSeatsSelected &&
+      allPricesSet
     );
   };
 
@@ -106,8 +115,19 @@ const [seats, setSeats] = useState([]); // Estado para almacenar los asientos se
     setLocationName(data.result.name); // Establecer el nombre de la ubicación aquí
 };
 
+const handlePriceChange = (category, price) => {
+  setSeatPrices((prevPrices) => ({
+    ...prevPrices,
+    [category]: price,
+  }));
+};
+
+
 const handleRegisterEvent = async () => {
   try {
+    const auth = getAuth(app);
+    const user = auth.currentUser;
+    const userId = user.uid; 
     const firestore = getFirestore(app);
     const storage = getStorage(app);
     
@@ -128,6 +148,7 @@ const handleRegisterEvent = async () => {
       locationName,
       eventDate,
       poster: posterUrl, // Guardar la URL de la imagen en Firestore
+      prices: seatPrices,
       seats: seats.flatMap((row, rowIndex) => 
         row.map((seat, colIndex) => ({
           row: rowIndex,
@@ -135,7 +156,8 @@ const handleRegisterEvent = async () => {
           category: seat.category,
           isAvailable: true
         }))
-      )
+      ),
+      userId
     });
 
     // Limpiar los estados después de guardar
@@ -149,6 +171,13 @@ const handleRegisterEvent = async () => {
     setEventDate(new Date());
     setSearchInput('');
     setPlaces([]);
+    setSeatPrices({
+      platino: '',
+      oro: '',
+      plata: '',
+      bronce: ''
+    });
+    
     
     // Navegar de regreso a la lista de eventos
     props.navigation.navigate('Events');
@@ -293,6 +322,21 @@ const handleRegisterEvent = async () => {
   <Text style={[styles.categoryText, { backgroundColor: '#C0C0C0' }]}>Plata</Text>
   <Text style={[styles.categoryText, { backgroundColor: '#CD7F32' }]}>Bronce</Text>
 </View>
+<View style={styles.priceContainer}>
+  {['platino', 'oro', 'plata', 'bronce'].map((category) => (
+    <View key={category} style={styles.priceInputContainer}>
+      <TextInput
+        style={styles.priceInput}
+        placeholder="Precio"
+        keyboardType="numeric"
+        onChangeText={(text) => handlePriceChange(category, text)}
+        value={seatPrices[category]}
+      />
+    </View>
+  ))}
+</View>
+
+
 <View style={styles.containerSeats}>
   <SeatSelection style={styles.alignSeats} seats={seats}  onSeatsChange={setSeats} />
   
@@ -508,6 +552,31 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     borderRadius: 5,
     overflow: 'hidden'
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 1,
+    marginTop: 10
+  },
+  priceInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 17,
+    marginBottom: 1,
+  },
+  priceLabel: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginRight: 5,
+  },
+  priceInput: {
+    width: 50,
+    height: 30,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    textAlign: 'center',
   },
   categoryText: {
     width: 80,

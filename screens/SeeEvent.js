@@ -160,7 +160,36 @@ export default function SeeEvent({ route, navigation }) {
   <Text style={[styles.categoryText, { backgroundColor: '#C0C0C0' }]}>Plata</Text>
   <Text style={[styles.categoryText, { backgroundColor: '#CD7F32' }]}>Bronce</Text>
   <Text style={[styles.categoryText, { backgroundColor: 'red' }]}>Ocupado</Text>
+  
+</View >
+<View style={styles.categoryBar}>
+<TextInput
+  style={[styles.categoryText, { backgroundColor: '#e5e4e2' }]}
+  value={`$${eventData.prices.platino || 'N/A'}`}
+  editable={false}
+/>
+<TextInput
+  style={[styles.categoryText, { backgroundColor: '#FFD700' }]}
+  value={`$${eventData.prices.oro || 'N/A'}`}
+  editable={false}
+/>
+<TextInput
+  style={[styles.categoryText, { backgroundColor: '#C0C0C0' }]}
+  value={`$${eventData.prices.plata || 'N/A'}`}
+  editable={false}
+/>
+<TextInput
+  style={[styles.categoryText, { backgroundColor: '#CD7F32' }]}
+  value={`$${eventData.prices.bronce || 'N/A'}`}
+  editable={false}
+/>
+<TextInput
+  style={[styles.categoryText, { backgroundColor: 'red' }]}
+  value={`N/A`}
+  editable={false}
+/>
 </View>
+
 
       <View style={styles.seatContainer}>{renderSeats()}</View>
      
