@@ -7,13 +7,15 @@ import { app } from '../config/firebase';
 import { getFirestore } from "firebase/firestore";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { onSnapshot } from 'firebase/firestore';
-
+import PaymentModal from './PaymentModal';
 
 export default function SeeEvent({ route, navigation }) {
   const { eventId } = route.params; 
   const [eventData, setEventData] = useState(null);
   const [seats, setSeats] = useState([]);
   const [selectedSeat, setSelectedSeat] = useState(null);
+  const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
+
 
   const auth = getAuth();
   const firestore = getFirestore(app);
@@ -53,9 +55,16 @@ export default function SeeEvent({ route, navigation }) {
       }
     }
   };
-
+  const handlePaymentSuccess = () => {
+    // Lógica para manejar el éxito del pago
+    setIsPaymentModalVisible(false);
+    alert('Asiento comprado');
+    navigation.goBack();
+  };
   const handlePurchase = async () => {
     if (!selectedSeat) return;
+
+    setIsPaymentModalVisible(true);
   
     try {
       const user = auth.currentUser;
@@ -87,7 +96,7 @@ export default function SeeEvent({ route, navigation }) {
         poster: eventData.poster,
         purchaseDate: Timestamp.now()
       });
-  
+      
       alert('Asiento comprado');
       navigation.goBack();
       setSelectedSeat(null);
@@ -154,6 +163,7 @@ export default function SeeEvent({ route, navigation }) {
     );
   }
 
+  
   return (
     <View style={styles.container}>
       <KeyboardAwareScrollView contentContainerStyle={styles.scrollContainer} enableOnAndroid={true}>
@@ -277,6 +287,14 @@ export default function SeeEvent({ route, navigation }) {
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
   <Text style={styles.backButtonText}>Volver</Text>
 </TouchableOpacity>
+<View style={styles.container}>
+    
+    <PaymentModal
+      visible={isPaymentModalVisible}
+      onClose={() => setIsPaymentModalVisible(false)}
+      onConfirm={handlePaymentSuccess}
+    />
+  </View>
 
     </View>
   );
