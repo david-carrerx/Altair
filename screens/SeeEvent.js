@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, TextInput, StyleSheet, Text, TouchableOpacity, Image } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { app } from '../config/firebase'; 
 import { getFirestore } from "firebase/firestore";
@@ -85,6 +85,7 @@ export default function SeeEvent({ route, navigation }) {
           category: selectedSeat.category,
         },
         poster: eventData.poster,
+        purchaseDate: Timestamp.now()
       });
   
       alert('Asiento comprado');

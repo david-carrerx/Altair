@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, FlatList } from 'react-native';
+import { View, Text, StyleSheet, Image, FlatList, Alert, TouchableOpacity } from 'react-native';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc, collection, query, where, onSnapshot } from "firebase/firestore";
+import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 
 export default function Tickets({ navigation }) {
     const auth = getAuth();
@@ -46,12 +46,62 @@ export default function Tickets({ navigation }) {
         };
     }, [auth, db]);
 
+    const cancelTicket = async (ticket) => {
+        try {
+            const ticketRef = doc(db, "tickets", `${ticket.userId}_${ticket.eventId}_${ticket.seat.row}-${ticket.seat.col}`);
+            await updateDoc(ticketRef, {
+                cancelled: true,
+            });
+
+            // Update the event seats to be available again
+            const eventRef = doc(db, "events", ticket.eventId);
+            const eventDoc = await getDoc(eventRef);
+            const eventData = eventDoc.data();
+            const updatedSeats = eventData.seats.map(seat =>
+                seat.row === ticket.seat.row && seat.col === ticket.seat.col
+                    ? { ...seat, isAvailable: true, purchasedBy: null }
+                    : seat
+            );
+            await updateDoc(eventRef, { seats: updatedSeats });
+
+            alert('Boleto cancelado exitosamente.');
+        } catch (error) {
+            console.error('Error cancelando el boleto: ', error);
+            alert('Error al cancelar el boleto.');
+        }
+    };
+
+    const handleCancel = (ticket) => {
+        Alert.alert(
+            'Confirmar cancelación',
+            '¿Estás seguro de que quieres cancelar este boleto?',
+            [
+                {
+                    text: 'No',
+                    onPress: () => console.log('Cancelación de boleto cancelada'),
+                    style: 'cancel',
+                },
+                {
+                    text: 'Sí',
+                    onPress: () => cancelTicket(ticket),
+                },
+            ],
+            { cancelable: false }
+        );
+    };
+
     const renderTicket = ({ item }) => (
         <View style={styles.card}>
             <Image source={{ uri: item.poster }} style={styles.posterImage} />
             <View style={styles.cardContent}>
                 <Text style={styles.categoryText}>Categoría: {item.seat.category}</Text>
                 <Text style={styles.seatText}>Asiento: {item.seat.row}-{item.seat.col}</Text>
+                <Text style={styles.dateText}>Fecha de compra: {item.purchaseDate.toDate().toLocaleDateString()}</Text>
+                {!item.cancelled && (
+                    <TouchableOpacity style={styles.cancelButton} onPress={() => handleCancel(item)}>
+                        <Text style={styles.cancelButtonText}>Cancelar Boleto</Text>
+                    </TouchableOpacity>
+                )}
             </View>
         </View>
     );
@@ -100,7 +150,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
         elevation: 5,
-        // Optional: Adjust width if needed
         width: '100%',
     },
     posterImage: {
@@ -121,4 +170,21 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#333',
     },
+    dateText: {
+        fontSize: 12,
+        color: '#555',
+        marginBottom: 5,
+    },
+    cancelButton: {
+        backgroundColor: '#DC3545',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    cancelButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    }
 });
