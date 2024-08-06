@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, FlatList, Alert, TouchableOpacity } from 'react-native';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, deleteDoc, updateDoc } from "firebase/firestore";
 
 export default function Tickets({ navigation }) {
     const auth = getAuth();
@@ -49,9 +49,7 @@ export default function Tickets({ navigation }) {
     const cancelTicket = async (ticket) => {
         try {
             const ticketRef = doc(db, "tickets", `${ticket.userId}_${ticket.eventId}_${ticket.seat.row}-${ticket.seat.col}`);
-            await updateDoc(ticketRef, {
-                cancelled: true,
-            });
+            await deleteDoc(ticketRef);
 
             // Update the event seats to be available again
             const eventRef = doc(db, "events", ticket.eventId);
@@ -63,6 +61,9 @@ export default function Tickets({ navigation }) {
                     : seat
             );
             await updateDoc(eventRef, { seats: updatedSeats });
+
+            // Remove the cancelled ticket from the state
+            setTickets(tickets.filter(t => t !== ticket));
 
             alert('Boleto cancelado exitosamente.');
         } catch (error) {

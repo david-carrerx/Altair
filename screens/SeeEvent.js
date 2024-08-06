@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, StyleSheet, Text, TouchableOpacity, Image } from 'react-native';
+import { View, TextInput, StyleSheet, Text, TouchableOpacity, Image, Alert } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
@@ -8,6 +8,7 @@ import { getFirestore } from "firebase/firestore";
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { onSnapshot } from 'firebase/firestore';
 import PaymentModal from './PaymentModal';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function SeeEvent({ route, navigation }) {
   const { eventId } = route.params; 
@@ -15,7 +16,6 @@ export default function SeeEvent({ route, navigation }) {
   const [seats, setSeats] = useState([]);
   const [selectedSeat, setSelectedSeat] = useState(null);
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
-
 
   const auth = getAuth();
   const firestore = getFirestore(app);
@@ -44,28 +44,16 @@ export default function SeeEvent({ route, navigation }) {
   
     fetchEventData();
   }, [eventId]);
-  
 
   const handleSeatSelect = (seat) => {
     if (seat.isAvailable) {
-      if (selectedSeat === seat) {
-        setSelectedSeat(null);
-      } else {
-        setSelectedSeat(seat);
-      }
+      setSelectedSeat(selectedSeat === seat ? null : seat);
     }
   };
-  const handlePaymentSuccess = () => {
-    // Lógica para manejar el éxito del pago
-    setIsPaymentModalVisible(false);
-    alert('Asiento comprado');
-    navigation.goBack();
-  };
+
   const handlePurchase = async () => {
     if (!selectedSeat) return;
 
-    setIsPaymentModalVisible(true);
-  
     try {
       const user = auth.currentUser;
       if (!user) {
@@ -94,9 +82,9 @@ export default function SeeEvent({ route, navigation }) {
           category: selectedSeat.category,
         },
         poster: eventData.poster,
-        purchaseDate: Timestamp.now()
+        purchaseDate: Timestamp.now(),
       });
-      
+
       alert('Asiento comprado');
       navigation.goBack();
       setSelectedSeat(null);
@@ -105,7 +93,11 @@ export default function SeeEvent({ route, navigation }) {
       alert('Error al comprar el boleto.');
     }
   };
-  
+
+  const handlePaymentSuccess = () => {
+    setIsPaymentModalVisible(false);
+    handlePurchase();
+  };
 
   const renderSeats = () => {
     const seatRows = seats.reduce((rows, seat) => {
@@ -163,10 +155,13 @@ export default function SeeEvent({ route, navigation }) {
     );
   }
 
-  
   return (
     <View style={styles.container}>
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+      <Ionicons name="arrow-back" size={24} color="#fff" />
+    </TouchableOpacity>
       <KeyboardAwareScrollView contentContainerStyle={styles.scrollContainer} enableOnAndroid={true}>
+      
         <View style={styles.posterContainer}>
           {eventData.poster ? (
             <Image source={{ uri: eventData.poster }} style={styles.posterImage} />
@@ -279,23 +274,17 @@ export default function SeeEvent({ route, navigation }) {
             Categoría: {selectedSeat.category} | 
             Precio: ${eventData.prices[selectedSeat.category] || 'N/A'}
           </Text>
-          <TouchableOpacity style={styles.purchaseButton} onPress={handlePurchase}>
+          <TouchableOpacity style={styles.purchaseButton} onPress={() => setIsPaymentModalVisible(true)}>
             <Text style={styles.purchaseButtonText}>Comprar</Text>
           </TouchableOpacity>
         </View>
       )}
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-  <Text style={styles.backButtonText}>Volver</Text>
-</TouchableOpacity>
-<View style={styles.container}>
-    
-    <PaymentModal
-      visible={isPaymentModalVisible}
-      onClose={() => setIsPaymentModalVisible(false)}
-      onConfirm={handlePaymentSuccess}
-    />
-  </View>
-
+      
+      <PaymentModal
+        visible={isPaymentModalVisible}
+        onClose={() => setIsPaymentModalVisible(false)}
+        onConfirm={handlePaymentSuccess}
+      />
     </View>
   );
 }
@@ -463,17 +452,16 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    bottom: 20, // Alinea el botón en la parte inferior
-    right: 20,  // Alinea el botón en la parte derecha
+    top: 20,
+    left: 20,
     backgroundColor: '#DC3545',
     padding: 10,
-    borderRadius: 5,
-    zIndex: 10,
+    borderRadius: 50, // Redondea el botón para que sea circular
+    elevation: 5, // Para sombra en Android
+    shadowColor: '#000', // Para sombra en iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    zIndex: 10
   },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-  }  
-  
 });
