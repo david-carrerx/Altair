@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, Text, Image, FlatList, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons'; 
-import { getFirestore, collection, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, doc, getDoc, updateDoc, writeBatch, query, where, getDocs } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '../config/firebase';
 
@@ -77,8 +77,50 @@ export default function Events({ navigation }) {
                     onPress: async () => {
                         try {
                             const eventRef = doc(db, 'events', eventId);
-                            await updateDoc(eventRef, { eventAvailable: false });
-                            console.log("Evento cancelado correctamente");
+                            
+                            // Iniciar una operación batch para realizar varias escrituras a la vez
+                            const batch = writeBatch(db);
+                            
+                            // Obtener los tickets relacionados con este evento
+                            const ticketsQuery = query(
+                                collection(db, 'tickets'),
+                                where('eventId', '==', eventId)
+                            );
+                            const ticketsSnapshot = await getDocs(ticketsQuery);
+    
+                            // Crear un array para almacenar los userId
+                            const userIds = [];
+    
+                            // Actualizar cada ticket y recolectar userId
+                            for (const ticketDoc of ticketsSnapshot.docs) {
+                                const ticketRef = doc(db, 'tickets', ticketDoc.id);
+                                batch.update(ticketRef, { available: false });
+                                
+                                // Recuperar el userId de cada ticket
+                                const ticketData = ticketDoc.data();
+                                userIds.push(ticketData.userId);
+                            }
+    
+                            // Cancelar el evento
+                            batch.update(eventRef, { eventAvailable: false });
+                            
+                            // Ejecutar todas las actualizaciones
+                            await batch.commit();
+    
+                            // Obtener y imprimir los correos electrónicos de los usuarios
+                            for (const userId of userIds) {
+                                const userDocRef = doc(db, 'users', userId);
+                                const userDocSnap = await getDoc(userDocRef);
+    
+                                if (userDocSnap.exists()) {
+                                    const userData = userDocSnap.data();
+                                    console.log(`User ID: ${userId}, Email: ${userData.email}`);
+                                } else {
+                                    console.log(`User ID: ${userId} no encontrado en la colección users`);
+                                }
+                            }
+    
+                            console.log("Evento y tickets cancelados correctamente");
                         } catch (error) {
                             console.error("Error cancelando el evento: ", error);
                         }
@@ -87,6 +129,9 @@ export default function Events({ navigation }) {
             ]
         );
     };
+    
+    
+    
 
     const renderEventItem = ({ item }) => (
         <TouchableOpacity onPress={() => handleSeeEvent(item.id)}>

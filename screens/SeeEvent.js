@@ -76,6 +76,7 @@ export default function SeeEvent({ route, navigation }) {
       await setDoc(ticketRef, {
         userId: user.uid,
         eventId: eventId,
+        available: true,
         seat: {
           row: selectedSeat.row,
           col: selectedSeat.col,

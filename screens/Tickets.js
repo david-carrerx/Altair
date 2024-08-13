@@ -23,7 +23,9 @@ export default function Tickets({ navigation }) {
                             where("userId", "==", userAuth.uid)
                         );
                         const unsubscribeTickets = onSnapshot(ticketsQuery, (querySnapshot) => {
-                            const ticketsData = querySnapshot.docs.map(doc => doc.data());
+                            const ticketsData = querySnapshot.docs
+                                .map(doc => doc.data())
+                                .filter(ticket => ticket.available); // Filtrar boletos disponibles
                             setTickets(ticketsData);
                         });
 
