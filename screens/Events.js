@@ -77,7 +77,16 @@ export default function Events({ navigation }) {
                     onPress: async () => {
                         try {
                             const eventRef = doc(db, 'events', eventId);
+                            const eventSnap = await getDoc(eventRef);
                             
+                            if (!eventSnap.exists()) {
+                                console.log("El evento no existe.");
+                                return;
+                            }
+                            
+                            const eventData = eventSnap.data();
+                            const eventName = eventData.eventName; // Nombre del evento
+    
                             // Iniciar una operación batch para realizar varias escrituras a la vez
                             const batch = writeBatch(db);
                             
@@ -103,24 +112,29 @@ export default function Events({ navigation }) {
     
                             // Cancelar el evento
                             batch.update(eventRef, { eventAvailable: false });
-                            
-                            // Ejecutar todas las actualizaciones
-                            await batch.commit();
     
-                            // Obtener y imprimir los correos electrónicos de los usuarios
+                            // Actualizar el campo 'alerts' de cada usuario
                             for (const userId of userIds) {
                                 const userDocRef = doc(db, 'users', userId);
                                 const userDocSnap = await getDoc(userDocRef);
     
                                 if (userDocSnap.exists()) {
                                     const userData = userDocSnap.data();
-                                    console.log(`User ID: ${userId}, Email: ${userData.email}`);
+                                    const alerts = userData.alerts || []; // Obtener alertas previas o inicializar un array vacío
+    
+                                    alerts.push(`El evento "${eventName}" fue cancelado, tus tickets ya no estarán disponibles y tu dinero te será devuelto.`);
+                                    batch.update(userDocRef, { alerts: alerts });
+                                    console.log("Alerts after update:", alerts); // Este log debe mostrar las alertas después de actualizar
+
                                 } else {
                                     console.log(`User ID: ${userId} no encontrado en la colección users`);
                                 }
                             }
     
-                            console.log("Evento y tickets cancelados correctamente");
+                            // Ejecutar todas las actualizaciones
+                            await batch.commit();
+    
+                            console.log("Evento y tickets cancelados correctamente, alertas enviadas.");
                         } catch (error) {
                             console.error("Error cancelando el evento: ", error);
                         }
@@ -129,6 +143,7 @@ export default function Events({ navigation }) {
             ]
         );
     };
+    
     
     
     
