@@ -80,7 +80,7 @@ const [seatPrices, setSeatPrices] = useState({
         setModalVisible(false);
       }}
     >
-      <Text style={styles.categoryText}>{item}</Text>
+      <Text style={styles.categoryTextItem}>{item}</Text>
     </TouchableOpacity>
   );
 
@@ -402,25 +402,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.5)',
+    color: '#000'
   },
   modalContainer: {
     width: '80%',
     backgroundColor: '#fff',
     borderRadius: 5,
     padding: 20,
+    color: '#000'
   },
   categoryItem: {
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
+    color: '#000'
   },
   categoryText: {
     fontSize: 16,
+    color: '#000'
   },
   addCategoryContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 10,
+    color: '#000'
   },
   newCategoryInput: {
     flex: 1,
@@ -429,6 +434,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 5,
     paddingHorizontal: 10,
+    color: '#000'
   },
   addButton: {
     marginLeft: 10,
